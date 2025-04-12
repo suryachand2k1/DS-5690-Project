@@ -1,0 +1,6 @@
+Model,Avg Prompt1 Time (s),Avg Prompt2 Time (s),Avg Total Time (s),Avg Prompt1 Speed (tokens/s),Avg Prompt2 Speed (tokens/s),Avg Overall Speed (tokens/s)
+deepseek-coder_33b,19.92,62.2,82.13,22.07,24.16,23.12
+codestral,11.59,25.12,36.72,29.87,33.5,31.68
+codellama_70b,124.35,103.76,228.11,12.74,14.42,13.58
+qwen2.5-coder_32b,19.78,75.52,95.3,21.75,23.3,22.52
+codegemma_7b,2.89,6.14,9.03,74.3,83.12,78.71
