@@ -1,0 +1,5410 @@
+index,language,code
+0,Python,"
+from pylearn2.datasets.mnistplus import MNISTPlus
+from pylearn2.space import IndexSpace, VectorSpace
+import unittest
+from pylearn2.testing.skip import skip_if_no_data
+import numpy as np
+
+def test_MNISTPlus():
+    
+    skip_if_no_data()
+    for subset in ['train', 'valid', 'test']:
+        ids = MNISTPlus(which_set=subset)
+        assert 0.01 >= ids.X.min() >= 0.0
+        assert 0.99 <= ids.X.max() <= 1.0
+        topo = ids.get_batch_topo(1)
+        assert topo.ndim == 4
+        del ids
+
+    train_y = MNISTPlus(which_set='train', label_type='label')
+    assert 0.99 <= train_y.X.max() <= 1.0
+    assert 0.0 <= train_y.X.min() <= 0.01
+    assert train_y.y.max() == 9
+    assert train_y.y.min() == 0
+    assert train_y.y.shape == (train_y.X.shape[0], 1)
+
+    train_y = MNISTPlus(which_set='train', label_type='azimuth')
+    assert 0.99 <= train_y.X.max() <= 1.0
+    assert 0.0 <= train_y.X.min() <= 0.01
+    assert 0.0 <= train_y.y.max() <= 1.0
+    assert 0.0 <= train_y.y.min() <= 1.0
+    assert train_y.y.shape == (train_y.X.shape[0], 1)
+
+    train_y = MNISTPlus(which_set='train', label_type='rotation')
+    assert 0.99 <= train_y.X.max() <= 1.0
+    assert 0.0 <= train_y.X.min() <= 0.01
+    assert train_y.y.max() == 9
+    assert train_y.y.min() == 0
+    assert train_y.y.shape == (train_y.X.shape[0], 1)
+
+    train_y = MNISTPlus(which_set='train', label_type='texture_id')
+    assert 0.99 <= train_y.X.max() <= 1.0
+    assert 0.0 <= train_y.X.min() <= 0.01
+    assert train_y.y.max() == 9
+    assert train_y.y.min() == 0
+    assert train_y.y.shape == (train_y.X.shape[0], 1)"
+1,Python,"
+import sys
+import hyperdex.client
+from hyperdex.client import LessEqual, GreaterEqual, Range, Regex, LengthEquals, LengthLessEqual, LengthGreaterEqual
+c = hyperdex.client.Client(sys.argv[1], int(sys.argv[2]))
+def to_objectset(xs):
+    return set([frozenset(x.items()) for x in xs])
+assert c.put('kv', 'k', {}) == True
+assert c.get('kv', 'k') == {'v': {}}
+assert c.put('kv', 'k', {'v': {1: 3.14, 2: 0.25, 3: 1.0}}) == True
+assert c.get('kv', 'k') == {'v': {1: 3.14, 2: 0.25, 3: 1.0}}
+assert c.put('kv', 'k', {'v': {}}) == True
+assert c.get('kv', 'k') == {'v': {}}"
+2,Python,"
+from __future__ import (nested_scopes, generators, division, absolute_import, with_statement,
+                        print_function, unicode_literals)
+from contextlib import contextmanager
+
+import os
+import unittest2 as unittest
+
+from pants.fs.fs import expand_path
+from pants.util.contextutil import environment_as, pushd, temporary_dir
+
+class ExpandPathTest(unittest.TestCase):
+  def test_pure_relative(self):
+    with self.root() as root:
+      self.assertEquals(os.path.join(root, 'a'), expand_path('a'))
+
+  def test_dot_relative(self):
+    with self.root() as root:
+      self.assertEquals(os.path.join(root, 'a'), expand_path('./a'))
+
+  def test_absolute(self):
+    self.assertEquals('/tmp/jake/bob', expand_path('/tmp/jake/bob'))
+
+  def test_user_expansion(self):
+    with environment_as(HOME='/tmp/jake'):
+      self.assertEquals('/tmp/jake/bob', expand_path('~/bob'))
+
+  def test_env_var_expansion(self):
+    with self.root() as root:
+      with environment_as(A='B', C='D'):
+        self.assertEquals(os.path.join(root, 'B/D/E'), expand_path('$A/${C}/E'))
+
+  @contextmanager
+  def root(self):
+    with temporary_dir() as root:
+      
+      real_root = os.path.realpath(root)
+      with pushd(real_root):
+        yield real_root"
+3,Python,"import unittest
+from mock import Mock
+from nosealert.plugin import AlertPlugin
+from nosealert.notifications import Notification
+
+class TestAlertPlugin(unittest.TestCase):
+
+    def setUp(self):
+        self.plugin = AlertPlugin()
+
+    def test_get_notification_success(self):
+        result = Mock(
+            failures=[],
+            errors=[],
+            testsRun=3,
+        )
+
+        self.assertEqual(self.plugin.get_notification(result), Notification(
+            total=3,
+        ))
+
+    def test_get_notification_with_fails(self):
+        result = Mock(
+            failures=[1, 2],
+            errors=[3],
+            testsRun=5,
+        )
+
+        self.assertEqual(self.plugin.get_notification(result), Notification(
+            fails=2,
+            errors=1,
+            total=5,
+        ))
+
+    def test_finalize_sends_notification(self):
+        notification = Mock()
+        result = Mock()
+        self.plugin.get_notification = Mock(return_value=notification)
+        self.plugin.finalize(result)
+        notification.send.assert_called_once_with()
+"
+4,Python,"
+import signal
+
+import boto.sqs
+import ujson
+
+from mobile_push.config import setting
+from mobile_push.logger import logger
+from mobile_push.message_router import MessageRouter
+
+keep_running = True
+
+def sigterm_handler(signum, _):
+
+    global keep_running
+
+    logger.warn('Receive SIGTERM')
+    keep_running = False
+
+def get_queue():
+
+    conn = boto.sqs.connect_to_region(setting.get('sqs', 'region'))
+    return conn.get_queue(setting.get('sqs', 'queue'))
+
+def poll_message(queue):
+
+    message = queue.read(wait_time_seconds=20)
+
+    if message is None:
+        return
+
+    try:
+        body = message.get_body()
+        units = ujson.loads(body)
+    except ValueError:
+        logger.error('Cannot parse: %s', body)
+        units = []
+
+    if not isinstance(units, list):
+        units = [units]
+
+    for unit in units:
+        try:
+            MessageRouter(unit).get_actor().run(unit)
+        except MessageRouter.BaseError:
+            logger.error('Cannot route message: %s', ujson.dumps(unit))
+        except Exception as e:
+            logger.exception(e)
+
+    queue.delete_message(message)
+
+def main():
+
+    signal.signal(signal.SIGTERM, sigterm_handler)
+    q = get_queue()
+
+    while keep_running:
+        poll_message(q)
+
+if __name__ == '__main__':
+
+    main()"
+5,Python,"import collections
+import json
+import unittest
+
+import responses
+from requests import HTTPError
+from mock import patch
+
+from batfish import Client
+from batfish.__about__ import __version__
+
+class TestClientAuthorize(unittest.TestCase):
+
+    def setUp(self):
+        with patch('batfish.client.read_token_from_conf',
+                   return_value=None):
+            self.cli = Client()
+
+    @responses.activate
+    def test_authorize_error(self):
+        url = ""https://api.digitalocean.com/v2/actions""
+        responses.add(responses.GET, url,
+                      body='{""error"": ""something""}', status=500,
+                      content_type=""application/json"")
+        with self.assertRaises(HTTPError):
+            self.cli.authorize(""test_token"")
+
+    @responses.activate
+    def test_authorize_unauthorized(self):
+        url = ""https://api.digitalocean.com/v2/kura""
+        body = {'id': ""unauthorized"", 'message': ""Unable to authenticate you.""}
+        responses.add(responses.GET, url, body=json.dumps(body), status=401,
+                      content_type=""application/json"")
+        self.cli.authorize(""test_token"")
+        self.assertEquals(responses.calls[0].response.status_code, 401)
+
+    @responses.activate
+    def test_authorize_unauthorized(self):
+        url = ""https://api.digitalocean.com/v2/actions""
+        responses.add(responses.GET, url,
+                      body='{""error"": ""something""}', status=200,
+                      content_type=""application/json"")
+        auth = self.cli.authorize(""test_token"")
+        self.assertEquals(auth, ""OK"")
+        self.assertEquals(responses.calls[0].response.status_code, 200)"
+6,Python,"
+from builtins import range
+def writeMeshMatlabFormat(mesh,meshFileBase):
+    
+    import numpy as numpy
+    matlabBase = 1
+    p = numpy.zeros((2,mesh['nNodes_global']),numpy.float_)
+    e = numpy.zeros((7,mesh['nElementBoundaries_global']),numpy.float_)
+    t = numpy.zeros((4,mesh['nElements_global']),numpy.float_)
+
+    mfile = open(meshFileBase+'.m','w')
+
+    mfile.write('p = [ ... \n')
+    for nN in range(mesh['nNodes_global']):
+        p[0,nN]=mesh['nodeArray'][nN,0]
+        p[1,nN]=mesh['nodeArray'][nN,1]
+        mfile.write('%g %g \n' % tuple(p[:,nN]))
+    mfile.write(']; \n')
+    mfile.write(""p = p\';\n"")  
+
+    mfile.write('e = [ ... \n')
+    for ebN in range(mesh['nElementBoundaries_global']):
+        e[0,ebN]=mesh['elementBoundaryNodesArray'][ebN,0] + matlabBase 
+        e[1,ebN]=mesh['elementBoundaryNodesArray'][ebN,1] + matlabBase 
+        e[2,ebN]=0.0 
+        e[3,ebN]=1.0
+        e[4,ebN]=ebN + matlabBase  
+        e[5,ebN]=0 
+        e[6,ebN]=1 
+        mfile.write('%g %g %g %g %g %g %g \n' % tuple(e[:,ebN]))
+    mfile.write(']; \n')
+    mfile.write(""e = e\';\n"")  
+
+    mfile.write('t = [ ... \n')
+    for eN in range(mesh['nElements_global']):
+        t[0,eN]=mesh['elementNodesArray'][eN,0]+matlabBase    
+        t[1,eN]=mesh['elementNodesArray'][eN,1]+matlabBase    
+        t[2,eN]=mesh['elementNodesArray'][eN,2]+matlabBase    
+        t[3,eN]=1                     
+        mfile.write('%g %g %g %g \n' % tuple(t[:,eN]))
+    mfile.write(']; \n');
+    mfile.write(""t = t\';\n"") 
+
+    mfile.close()
+    return p,e,t
+
+if __name__ == '__main__':
+    import os,shelve
+    import ppmatlab,numpy.oldnumeric as numpy
+
+    os.listdir('./results')
+
+    filename = './results/re_forsyth2_ss_2d_pre_forsyth2_ss_2d_c0p1_n_mesh_results.dat'
+
+    res = shelve.open(filename)
+
+    mesh = res['mesh']
+
+    mmfile = 'forsyth2MeshMatlab'
+    p,e,t = ppmatlab.writeMeshMatlabFormat(mesh,mmfile)"
+7,Python,"from collections import defaultdict
+import codecs
+
+def count(corpus, output_file):
+    debug = False
+    dic = defaultdict(int)
+    other = set()
+    fout = codecs.open(output_file, 'w', 'utf8')
+    for line in open(corpus, 'r'):
+        words = line.split()
+        for word in words:
+            if len(word) % 3 == 0:
+                for i in xrange(len(word) / 3):
+                    dic[word[i:i+3]] += 1
+            else:
+                other.add(word)
+    fout.write('%i %i\n' % (len(dic), len(other)))
+    
+    record_list = [(y, x) for x, y in dic.items()]
+    record_list.sort()
+    record_list.reverse()
+    i = 0
+    for x, y in record_list:
+        
+        try:
+            yy = y.decode('GBK')
+        except:
+            print y
+            yy = 'N/A'
+        fout.write('%s %i\n' % (yy, x))
+        i += 1
+        if i > 10 and debug:
+            break
+
+    other_list = list(other)
+    other_list.sort()
+    for item in other_list:
+        
+        item2 = item.decode('utf8')
+        fout.write(item2)
+        fout.write('\n')
+        i += 1
+        if i > 20 and debug:
+            break
+    fout.close()
+
+if __name__ =='__main__':
+    count('data/train.zh_parsed', 'output/count.zh')
+    count('data/train.ja_parsed', 'output/count.ja')"
+8,Python,"import pilas
+import json
+from pilas.escena import Base
+from general import General
+from individual import Individual
+
+class jugadores(Base):
+
+	def __init__(self):
+		Base.__init__(self)
+		
+	def fondo(self):
+		pilas.fondos.Fondo(""data/img/fondos/aplicacion.jpg"")
+
+	def general(self):
+		self.sonido_boton.reproducir()
+		pilas.almacenar_escena(General())
+
+	def individual(self):
+		self.sonido_boton.reproducir()
+		pilas.almacenar_escena(Individual())
+
+	def volver(self):
+		self.sonido_boton.reproducir()
+		pilas.recuperar_escena()
+
+	def iniciar(self):
+		self.fondo()
+		self.sonido_boton = pilas.sonidos.cargar(""data/audio/boton.ogg"")
+		self.interfaz()
+		self.mostrar()
+
+	def interfaz(self):
+		opcion= [(""General"",self.general),(""Individual"",self.individual),(""Volver"",self.volver)]
+		menu = pilas.actores.Menu(opcion, y=50, fuente=""data/fonts/American Captain.ttf"")
+		menu.escala = 1.3
+		enunciado = pilas.actores.Actor(""data/img/enunciados/estadisticas.png"",y=250)
+		enunciado.escala = 0.3"
+9,Python,"
+from django.shortcuts import render_to_response
+from django.template.context import RequestContext
+from help.models import ConditionsChapter, FAQ
+
+def faqs(request):
+
+    extra_context = {}
+
+    extra_context['faqs'] = FAQ.objects.all()
+
+    return render_to_response('help/faqs.html',
+                              extra_context,
+                              context_instance=RequestContext(request))
+
+def terms(request):
+
+    extra_context = {}
+
+    extra_context['termsandconditions'] = ConditionsChapter.objects.all()
+
+    return render_to_response('help/terms-and-conditions.html',
+                              extra_context,
+                              context_instance=RequestContext(request))
+
+def about(request):
+
+    extra_context = {}
+
+    return render_to_response('help/about.html',
+                              extra_context,
+                              context_instance=RequestContext(request))"
+10,Python,"from django.http import Http404, HttpResponse
+from django.template.context_processors import csrf
+from rest_framework.authentication import TokenAuthentication
+from rest_framework.parsers import JSONParser
+from rest_framework.permissions import DjangoModelPermissions
+from rest_framework.views import APIView
+from .models import FrontendDeployment
+
+dev = 
+
+def application_serve(request):
+    if request.is_ajax() is False:
+        try:
+            deployment = FrontendDeployment.objects.filter(enabled=True).latest('created_at')
+        except FrontendDeployment.DoesNotExist:
+            return HttpResponse(dev.format(csrf_token=csrf(request)['csrf_token']))
+
+        return HttpResponse(deployment.content.format(csrf_token=csrf(request)['csrf_token']))
+    raise Http404()
+
+class FrontendAPI(APIView):
+    authentication_classes = [TokenAuthentication, ]
+    permission_classes = [DjangoModelPermissions, ]
+    queryset = FrontendDeployment.objects.none()
+
+    def post(self, request):
+        FrontendDeployment.objects.create(
+            content=request.data['contents'],
+        )
+        return HttpResponse(status=200)"
+11,Python,"
+import time
+import pandas as pd
+import dna.logging
+import intuition.data.forex as forex
+
+log = dna.logging.logger(__name__)
+
+class Forex(object):
+    
+    def __init__(self, pairs, properties):
+        self._wait_retry = properties.get('retry', 10)
+        self.forex = forex.TrueFX(pairs=pairs)
+        self.forex.connect()
+
+    def get_data(self, sids):
+        while True:
+            rates = self.forex.query_rates()
+            if len(rates.keys()) >= len(sids):
+                log.debug('Data available for {}'.format(rates.keys()))
+                break
+            log.debug('Incomplete data ({}/{}), retrying in {}s'.format(
+                len(rates.keys()), len(sids), self._wait_retry))
+            time.sleep(self._wait_retry)
+            debug_feedback = self.forex.connect()
+            log.info('New Truefx connection: {}'.format(debug_feedback))
+
+        return rates
+
+    @property
+    def mapping(self):
+        return {
+            'dt': (lambda x: x, 'dt'),
+            
+            'trade_time': (lambda x: pd.datetime.utcfromtimestamp(
+                float(x[:-3])), 'timeStamp'),
+            'sid': (lambda x: x, 'sid'),
+            'price': (float, 'bid'),
+            'ask': (float, 'ask'),
+            'high': (float, 'high'),
+            'low': (float, 'low'),
+            'volume': (lambda x: 10000, 'bid')
+        }"
+12,Python,"
+import models
+
+class ModelFactory(object):
+    
+    @classmethod
+    def create_user(cls, name, email, training_journal):
+        
+        user = models.User(parent=models.USER_KEY)
+        user.name = name
+        user.email = email
+        user.training_journal = training_journal.key
+
+        return user
+
+    @classmethod
+    def create_training_journal(cls):
+        
+        return models.TrainingJournal(parent=models.TRAINING_JOURNAL_KEY)
+
+    @classmethod
+    def create_workout_session(cls, started_at, ended_at, training_journal):
+        
+        workout_session = models.WorkoutSession(parent=models.WORKOUT_SESSION_KEY)
+        workout_session.started_at = started_at
+        workout_session.ended_at = ended_at
+        workout_session.training_journal = training_journal.key
+
+        return workout_session
+
+    @classmethod
+    def create_workout_set(cls, repetitions, weight, workout_session, workout):
+        
+        workout_set = models.WorkoutSet(parent=models.WORKOUT_SET_KEY)
+        workout_set.repetitions = repetitions
+        workout_set.weight = weight
+        workout_set.workout_session = workout_session.key
+        workout_set.workout = workout.key
+
+        return workout_set
+
+    @classmethod
+    def create_workout(cls, muscle_group, names=[], description='', images=[]):
+        
+        workout = models.Workout(parent=models.WORKOUT_KEY)
+        workout.names = names
+        workout.muscle_group = muscle_group
+        workout.description = description
+        workout.images = images
+
+        return workout"
+13,Python,"
+import json
+from axe.http_exceptions import BadJSON
+
+def get_request(request):
+    return request
+
+def get_query(request):
+    return request.args
+
+def get_form(request):
+    return request.form
+
+def get_body(request):
+    return request.data
+
+def get_headers(request):
+    return request.headers
+
+def get_cookies(request):
+    return request.cookies
+
+def get_method(request):
+    return request.method
+
+def get_json(headers, body):
+    content_type = headers.get('Content-Type')
+    if content_type != 'application/json':
+        return
+    data = body.decode('utf8')
+    try:
+        return json.loads(data)
+    except ValueError:
+        raise BadJSON"
+14,Python,"
+import pygtk
+pygtk.require('2.0')
+import gtk
+
+class CheckButton:
+    
+    def callback(self, widget, data=None):
+        print ""%s was toggled %s"" % (data, (""OFF"", ""ON"")[widget.get_active()])
+
+    def delete_event(self, widget, event, data=None):
+        gtk.main_quit()
+        return False
+
+    def __init__(self):
+        
+        self.window = gtk.Window(gtk.WINDOW_TOPLEVEL)
+
+        self.window.set_title(""Check Button"")
+
+        self.window.connect(""delete_event"", self.delete_event)
+
+        self.window.set_border_width(20)
+
+        vbox = gtk.VBox(True, 2)
+
+        self.window.add(vbox)
+
+        button = gtk.CheckButton(""check button 1"")
+
+        button.connect(""toggled"", self.callback, ""check button 1"")
+
+        vbox.pack_start(button, True, True, 2)
+
+        button.show()
+
+        button = gtk.CheckButton(""check button 2"")
+
+        button.connect(""toggled"", self.callback, ""check button 2"")
+        
+        vbox.pack_start(button, True, True, 2)
+
+        button.show()
+
+        button = gtk.Button(""Quit"")
+
+        button.connect(""clicked"", lambda wid: gtk.main_quit())
+
+        vbox.pack_start(button, True, True, 2)
+
+        button.show()
+        vbox.show()
+        self.window.show()
+
+def main():
+    gtk.main()
+    return 0
+
+if __name__ == ""__main__"":
+    CheckButton()
+    main()"
+15,Python,"
+import re
+
+from exchange.constants import (
+    CURRENCIES,
+    CURRENCY_NAMES,
+    DEFAULT_CURRENCY,
+    CURRENCY_EUR,
+    CURRENCY_UAH,
+    CURRENCY_USD,
+    CURRENCY_SESSION_KEY)
+
+def round_number(value, decimal_places=2, down=False):
+
+    assert decimal_places > 0
+    factor = 1.0 ** decimal_places
+    sign = -1 if value < 0 else 1
+    return int(value * factor + sign * (0 if down else 0.5)) / factor
+
+def format_number(value):
+
+    append_comma = lambda match_object: ""%s,"" % match_object.group(0)
+
+    value = ""%.2f"" % float(value)
+    value = re.sub(""(\d)(?=(\d{3})+\.)"", append_comma, value)
+
+    return value
+
+def format_price(price, round_price=False):
+    price = float(price)
+    return format_number(round_number(price) if round_price else price)
+
+def format_printable_price(price, currency=DEFAULT_CURRENCY):
+    return '%s %s' % (format_price(price), dict(CURRENCIES)[currency])
+
+def get_currency_from_session(session):
+    currency = session.get(CURRENCY_SESSION_KEY) or DEFAULT_CURRENCY
+    return int(currency)
+
+def get_price_factory(rates, src, dst):
+
+    if src == dst:
+        return lambda p: p
+
+    name = lambda c: CURRENCY_NAMES[c]
+
+    if src == CURRENCY_UAH:
+        return lambda p: p / getattr(rates, name(dst))
+
+    if dst == CURRENCY_UAH:
+        return lambda p: p * getattr(rates, name(src))
+
+    if src == CURRENCY_USD and dst == CURRENCY_EUR:
+        return lambda p: p * rates.usd_eur
+
+    if src == CURRENCY_EUR and dst == CURRENCY_USD:
+        return lambda p: p / rates.usd_eur
+
+    raise ValueError('Unknown currencies')"
+16,Python,"
+from __future__ import division, absolute_import, print_function, unicode_literals
+from awlsim.common.compat import *
+
+from awlsim.core.instructions.main import * 
+from awlsim.core.operators import *
+
+class AwlInsn_ASSERT_LT(AwlInsn): 
+
+	__slots__ = ()
+
+	def __init__(self, cpu, rawInsn):
+		AwlInsn.__init__(self, cpu, AwlInsn.TYPE_ASSERT_LT, rawInsn)
+		self.assertOpCount(2)
+
+	def run(self):
+
+		s = self.cpu.statusWord
+		val0 = self.cpu.fetch(self.ops[0])
+		val1 = self.cpu.fetch(self.ops[1])
+		if not (val0 < val1):
+			raise AwlSimError(""Assertion failed"")
+		s.NER = 0"
+17,Python,"from scapy.all import *
+from scapy.layers import dhcp6
+from time import time
+
+def duid(ll_addr):
+    return DUID_LLT(lladdr=ll_addr, timeval=time())
+
+def ias(requested, iface, T1=None, T2=None):
+    return map(lambda r: __build_ia(r, iface, T1, T2), requested)
+
+def options(requested):
+    return map(__build_option_by_code, requested)
+
+def __build_ia(request, iface, T1=None, T2=None):
+    ia = request.__class__(iaid=request.iaid, T1=(T1 == None and request.T1 or T1), T2=(T2 == None and request.T2 or T2))
+
+    ia.ianaopts.append(DHCP6OptIAAddress(addr=str(iface.global_ip()), preflft=300, validlft=300))
+
+    return ia
+
+def __build_option_by_code(code):
+    opt = __option_klass_by_code(code)()
+
+    if isinstance(opt, DHCP6OptClientFQDN):
+        opt.fqdn = 'testhost.local.'
+    elif isinstance(opt, DHCP6OptDNSDomains):
+        pass
+    elif isinstance(opt, DHCP6OptDNSServers):
+        opt.dnsservers.append('2001:500:88:200::10')
+    elif isinstance(opt, DHCP6OptSNTPServers):
+        opt.sntpservers.append('2001:500:88:200::10')
+
+    return opt
+
+def __option_klass_by_code(code):
+    return getattr(dhcp6, dhcp6.dhcp6opts_by_code[code])"
+18,Python,"from flask import Flask, Response, request
+from twilio.util import TwilioCapability
+
+app = Flask(__name__)
+
+@app.route('/token', methods=['GET'])
+def get_capability_token():
+    
+    account_sid = 'ACXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'
+    auth_token = 'your_auth_token'
+
+    capability = TwilioCapability(account_sid, auth_token)
+
+    application_sid = 'APXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'
+    capability.allow_client_outgoing(application_sid)
+    capability.allow_client_incoming(request.form[""ClientName""])
+    token = capability.generate()
+
+    return Response(token, mimetype='application/jwt')
+
+if __name__ == ""__main__"":
+    app.run(debug=True)"
+19,Python,"
+COMPUTE_URL_BASE = 'https://www.googleapis.com/compute/v1/'
+
+def GlobalComputeUrl(project, collection, name):
+  return ''.join([COMPUTE_URL_BASE, 'projects/', project,
+                  '/global/', collection, '/', name])
+
+def ZonalComputeUrl(project, zone, collection, name):
+  return ''.join([COMPUTE_URL_BASE, 'projects/', project,
+                  '/zones/', zone, '/', collection, '/', name])
+
+def GenerateConfig(context):
+  
+  base_name = context.properties['instanceName']
+
+  items = []
+  for key, value in context.properties['metadata'].iteritems():
+    items.append({
+        'key': key,
+        'value': value
+        })
+  metadata = {'items': items}
+
+  instance = {
+      'zone': context.properties['zone'],
+      'machineType': ZonalComputeUrl(
+          context.env['project'], context.properties['zone'], 'machineTypes',
+          'f1-micro'),
+      'metadata': metadata,
+      'serviceAccounts': [{
+          'email': 'default',
+          'scopes': context.properties['scopes']
+      }],
+      'disks': [{
+          'deviceName': 'boot',
+          'type': 'PERSISTENT',
+          'autoDelete': True,
+          'boot': True,
+          'initializeParams': {
+              'diskName': base_name + '-disk',
+              'sourceImage': GlobalComputeUrl(
+                  'debian-cloud', 'images',
+                  ''.join(['backports-debian', '-7-wheezy-v20151104']))
+              },
+          }],
+      'networkInterfaces': [{
+          'accessConfigs': [{
+              'name': 'external-nat',
+              'type': 'ONE_TO_ONE_NAT'
+              }],
+          'network': GlobalComputeUrl(
+              context.env['project'], 'networks', 'default')
+          }]
+      }
+
+  return {
+      'resources': [{
+          'name': base_name,
+          'type': 'compute.v1.instance',
+          'properties': instance
+          }]
+      }"
+20,Python,"
+import sys
+sys.path.append('/var/www/html/valumodel.com/scripts/dcf')
+from calc_dcf import calc_dcf
+
+def create_dcf(req, tax_rate, growth_rate_1_year_out, sga_of_sales, da_of_sales, capex_of_sales, nwc_of_sales, levered_beta, current_yield, exit_multiple, ticker):
+	assumptions = {}
+	try:
+		assumptions['Tax Rate']               = float(tax_rate)/100.0
+		assumptions['Growth Rate 1 year out'] = float(growth_rate_1_year_out)/100.0
+		assumptions['SGA % of sales']         = float(sga_of_sales)/100.0
+		assumptions['D&A % of sales']         = float(da_of_sales)/100.0
+		assumptions['CAPEX % of sales']       = float(capex_of_sales)/100.0
+		assumptions['NWC % of sales']         = float(nwc_of_sales)/100.0
+		assumptions['Levered Beta']           = float(levered_beta)
+		assumptions['Current Yield']          = float(current_yield)/100.0
+		assumptions['Exit Multiple']          = float(exit_multiple)
+	except ValueError:
+		return '<!doctype html><html><body><h1>Invalid DCF Input.  Please try again.</h1></body></html>'
+        ticker = ticker.split(' ')[0]
+        if not ticker.isalnum():
+            return '<!doctype html><html><body><h1>Invalid Ticker.  Please try again.</h1></body></html>'
+
+	return calc_dcf(assumptions, ticker.upper())"
+21,Python,"from datetime import datetime
+import hashlib
+
+from extractor import Ways
+from date import way_date
+
+class Helpers:
+    
+    @staticmethod
+    def make_id(website, timestamp):
+        
+        m=hashlib.md5()
+        m.update(''.join([website, timestamp]).encode())
+        return m.hexdigest()
+
+class WayDefault:
+    
+    @classmethod
+    def set_parser(cls, ParserObj):
+        
+        cls.parser=ParserObj
+
+    def __init__(self, snap_dict):
+        
+        self._raw=snap_dict
+        self.timestamp=snap_dict['timestamp']
+        self._data=self.parser.parse(self._raw['page'])
+        self._data.update({
+        'website':snap_dict['website'],
+        'timestamp':way_date(self.timestamp),
+            })
+        self.id=Helpers.make_id(snap_dict['website'],self.timestamp)
+        self.report=snap_dict['report']
+
+    @property
+    def extracted(self):
+        
+        return {k:v for k,v in self._data.items() if k != 'page'}
+
+    @property
+    def snapshot(self):
+        
+        return self._data['page']
+
+    @property
+    def data(self):
+        
+        return self._data
+
+WayDefault.set_parser(Ways)"
+22,Python,"
+from __future__ import unicode_literals
+
+import os, sys
+import tempfile
+from winsys._compat import unittest
+import uuid
+
+import win32file
+
+from winsys.tests.test_fs import utils
+from winsys import fs
+
+class TestFS (unittest.TestCase):
+
+  filenames = [""%d"" % i for i in range (5)]
+
+  def setUp (self):
+    utils.mktemp ()
+    for filename in self.filenames:
+      with open (os.path.join (utils.TEST_ROOT, filename), ""w""):
+        pass
+
+  def tearDown (self):
+    utils.rmtemp ()
+
+  def test_glob (self):
+    import glob
+    pattern = os.path.join (utils.TEST_ROOT, ""*"")
+    self.assertEquals (list (fs.glob (pattern)), glob.glob (pattern))
+
+  def test_listdir (self):
+    import os
+    fs_version = list (fs.listdir (utils.TEST_ROOT))
+    os_version = os.listdir (utils.TEST_ROOT)
+    self.assertEquals (fs_version, os_version, ""%s differs from %s"" % (fs_version, os_version))
+
+if __name__ == ""__main__"":
+  unittest.main ()
+  if sys.stdout.isatty (): raw_input (""Press enter..."")"
+23,Python,"
+import os
+import unittest
+from pyquickhelper.loghelper import fLOG
+from pyquickhelper.filehelper import explore_folder_iterfile
+from pyquickhelper.ipythonhelper import upgrade_notebook, remove_execution_number
+
+class TestConvertNotebooks(unittest.TestCase):
+    
+    def test_convert_notebooks(self):
+        fLOG(
+            __file__,
+            self._testMethodName,
+            OutputPrint=__name__ == ""__main__"")
+        fold = os.path.abspath(os.path.dirname(__file__))
+        fold2 = os.path.normpath(
+            os.path.join(fold, "".."", "".."", ""_doc"", ""notebooks""))
+        for nbf in explore_folder_iterfile(fold2, pattern="".*[.]ipynb""):
+            t = upgrade_notebook(nbf)
+            if t:
+                fLOG(""modified"", nbf)
+            
+            remove_execution_number(nbf, nbf)
+
+        fold2 = os.path.normpath(os.path.join(fold, "".."", "".."", ""_unittests""))
+        for nbf in explore_folder_iterfile(fold2, pattern="".*[.]ipynb""):
+            t = upgrade_notebook(nbf)
+            if t:
+                fLOG(""modified"", nbf)
+
+if __name__ == ""__main__"":
+    unittest.main()"
+24,Python,"
+import sys, shutil
+
+try:
+    from gi.repository import Gtk, Gdk, Vte, GLib, Pango, GConf, GdkPixbuf
+    import json, os, getpass
+    from pycm.pycm_globals import *
+except ImportError as e:
+    print ""Error during importing of necessaries modules.\nError is '%s'"" % e
+    sys.exit()
+
+python_path = ""/usr/lib/python2.7/dist-packages/""
+module_path = python_path + 'pycm'
+bin_exe = '/usr/bin/pycm.py'
+launcher = '/usr/share/applications/pyconnection-manager.desktop'
+uid = os.getuid()
+
+def __init__():
+    if uid > 0:
+        print ""You need to be root to install pyConnection Manager""
+        sys.exit()
+
+    try:
+        remove_old()
+    except OSError, IOError:
+        print ""ERROR removing old stuff""
+        sys.exit()
+
+    try:
+        create_new()
+    except OSError, IOError:
+        print ""ERROR installing pyConnection Manager""
+        sys.exit()
+
+    ok = ""\n\tpyConnection Manager succesfully installed\n""
+    print ok
+
+def remove_old():
+    if os.path.exists(module_path):
+        shutil.rmtree(module_path)
+
+    if os.path.exists(GLADE_DIR):
+        shutil.rmtree(GLADE_DIR)
+
+    if os.path.exists(IMAGE_DIR):
+        shutil.rmtree(IMAGE_DIR)
+
+    if os.path.exists(bin_exe):
+        os.remove(bin_exe)
+
+    if os.path.exists(launcher):
+        os.remove(launcher)
+
+def create_new():
+    shutil.copytree('pycm', module_path)
+    shutil.copytree('glade', GLADE_DIR)
+    shutil.copytree('img', IMAGE_DIR)
+
+    shutil.copyfile('pycm.py', '/usr/bin/pycm')
+    shutil.copyfile('pyconnection-manager.desktop', launcher)
+
+    dir_list = [module_path, GLADE_DIR, IMAGE_DIR]
+
+    for i in dir_list:
+        os.chmod(i, 655)
+
+__init__()"
+25,C,"
+typedef struct vg_point {
+	struct vg_node _inherit;
+	float size;			
+} VG_Point;
+
+#define VGPOINT(p) ((VG_Point *)(p))
+
+__BEGIN_DECLS
+extern DECLSPEC VG_NodeOps vgPointOps;
+
+static __inline__ VG_Point *
+VG_PointNew(void *pNode, VG_Vector pos)
+{
+	VG_Point *vp;
+
+	vp = (VG_Point *)AG_Malloc(sizeof(VG_Point));
+	VG_NodeInit(vp, &vgPointOps);
+	VG_Translate(vp, pos);
+	VG_NodeAttach(pNode, vp);
+	return (vp);
+}
+
+static __inline__ void
+VG_PointSize(VG_Point *vp, float r)
+{
+	VG_Lock(VGNODE(vp)->vg);
+	vp->size = r;
+	VG_Unlock(VGNODE(vp)->vg);
+}
+__END_DECLS
+"
+26,C,"
+#ifndef INCLUDED_ATSC_VITERBI_DECODER_H
+#define INCLUDED_ATSC_VITERBI_DECODER_H
+
+#include <atsc_api.h>
+#include <gr_sync_block.h>
+#include <atsci_viterbi_decoder.h>
+
+class atsc_viterbi_decoder;
+typedef boost::shared_ptr<atsc_viterbi_decoder> atsc_viterbi_decoder_sptr;
+
+ATSC_API atsc_viterbi_decoder_sptr atsc_make_viterbi_decoder();
+
+class ATSC_API atsc_viterbi_decoder : public gr_sync_block
+{
+  friend ATSC_API atsc_viterbi_decoder_sptr atsc_make_viterbi_decoder();
+
+  atsci_viterbi_decoder	d_viterbi_decoder;
+
+  atsc_viterbi_decoder();
+
+public:
+  int work (int noutput_items,
+	    gr_vector_const_void_star &input_items,
+	    gr_vector_void_star &output_items);
+
+  void reset() {  }
+
+protected:
+  int	    last_start;
+
+};
+
+#endif "
+27,C,"
+#ifndef __LINUX_SEMAPHORE_H
+#define __LINUX_SEMAPHORE_H
+
+#include <linux/list.h>
+#include <linux/spinlock.h>
+
+struct semaphore {
+	spinlock_t		lock;
+	unsigned int		count;
+	struct list_head	wait_list;
+};
+
+#define __SEMAPHORE_INITIALIZER(name, n)				\
+{									\
+	.lock		= __SPIN_LOCK_UNLOCKED((name).lock),		\
+	.count		= n,						\
+	.wait_list	= LIST_HEAD_INIT((name).wait_list),		\
+}
+
+#define DECLARE_MUTEX(name)	\
+	struct semaphore name = __SEMAPHORE_INITIALIZER(name, 1)
+
+#define DEFINE_SEMAPHORE(name)	\
+	struct semaphore name = __SEMAPHORE_INITIALIZER(name, 1)
+
+static inline void sema_init(struct semaphore *sem, int val)
+{
+	static struct lock_class_key __key;
+	*sem = (struct semaphore) __SEMAPHORE_INITIALIZER(*sem, val);
+	lockdep_init_map(&sem->lock.dep_map, ""semaphore->lock"", &__key, 0);
+}
+
+#define init_MUTEX(sem)		sema_init(sem, 1)
+#define init_MUTEX_LOCKED(sem)	sema_init(sem, 0)
+
+extern void down(struct semaphore *sem);
+extern int __must_check down_interruptible(struct semaphore *sem);
+extern int __must_check down_killable(struct semaphore *sem);
+extern int __must_check down_trylock(struct semaphore *sem);
+extern int __must_check down_timeout(struct semaphore *sem, long jiffies);
+extern void up(struct semaphore *sem);
+
+#endif "
+28,C,"
+#ifndef QHTTPMULTIPART_H
+#define QHTTPMULTIPART_H
+
+#include <QtCore/QSharedDataPointer>
+#include <QtCore/QByteArray>
+#include <QtCore/QIODevice>
+#include <QtNetwork/QNetworkRequest>
+
+QT_BEGIN_NAMESPACE
+
+class QHttpPartPrivate;
+class QHttpMultiPart;
+
+class Q_NETWORK_EXPORT QHttpPart
+{
+public:
+    QHttpPart();
+    QHttpPart(const QHttpPart &other);
+    ~QHttpPart();
+#ifdef Q_COMPILER_RVALUE_REFS
+    QHttpPart &operator=(QHttpPart &&other) Q_DECL_NOTHROW { swap(other); return *this; }
+#endif
+    QHttpPart &operator=(const QHttpPart &other);
+
+    void swap(QHttpPart &other) Q_DECL_NOTHROW { qSwap(d, other.d); }
+
+    bool operator==(const QHttpPart &other) const;
+    inline bool operator!=(const QHttpPart &other) const
+    { return !operator==(other); }
+
+    void setHeader(QNetworkRequest::KnownHeaders header, const QVariant &value);
+    void setRawHeader(const QByteArray &headerName, const QByteArray &headerValue);
+
+    void setBody(const QByteArray &body);
+    void setBodyDevice(QIODevice *device);
+
+private:
+    QSharedDataPointer<QHttpPartPrivate> d;
+
+    friend class QHttpMultiPartIODevice;
+};
+
+Q_DECLARE_SHARED(QHttpPart)
+
+class QHttpMultiPartPrivate;
+
+class Q_NETWORK_EXPORT QHttpMultiPart : public QObject
+{
+    Q_OBJECT
+
+public:
+
+    enum ContentType {
+        MixedType,
+        RelatedType,
+        FormDataType,
+        AlternativeType
+    };
+
+    explicit QHttpMultiPart(QObject *parent = Q_NULLPTR);
+    explicit QHttpMultiPart(ContentType contentType, QObject *parent = Q_NULLPTR);
+    ~QHttpMultiPart();
+
+    void append(const QHttpPart &httpPart);
+
+    void setContentType(ContentType contentType);
+
+    QByteArray boundary() const;
+    void setBoundary(const QByteArray &boundary);
+
+private:
+    Q_DECLARE_PRIVATE(QHttpMultiPart)
+    Q_DISABLE_COPY(QHttpMultiPart)
+
+    friend class QNetworkAccessManager;
+    friend class QNetworkAccessManagerPrivate;
+};
+
+QT_END_NAMESPACE
+
+#endif "
+29,C,"
+#pragma once
+
+#include ""Layer.h""
+
+namespace paddle {
+
+class SwitchOrderLayer : public Layer {
+public:
+  explicit SwitchOrderLayer(const LayerConfig& config) : Layer(config) {}
+
+  ~SwitchOrderLayer() {}
+
+  bool init(const LayerMap& layerMap,
+            const ParameterMap& parameterMap) override;
+  void forward(PassType passType) override;
+  void backward(const UpdateCallback& callback = nullptr) override;
+  void setInDims();
+  void setOutDims();
+
+protected:
+  std::vector<std::shared_ptr<FunctionBase>> nchw2nhwc_;
+  std::vector<std::shared_ptr<FunctionBase>> nhwc2nchw_;
+  TensorShape inDims_;
+  TensorShape outDims_;
+  std::vector<int> heightAxis_;
+  std::vector<int> widthAxis_;
+  size_t reshapeHeight_;
+  size_t reshapeWidth_;
+};
+}  "
+30,C,"
+#ifndef implement_template_h
+#define implement_template_h
+
+#line 2 ""implement_template.cpp""
+
+template< typename T >
+class Test
+{
+public:
+  void test_func();
+
+public:  
+#line 23 ""implement_template.cpp""
+  
+  template<
+    typename X, 
+    typename X2 
+  > void __attribute__((deprecated))
+  test_func2<X,X2>();
+};
+
+#line 12 ""implement_template.cpp""
+
+template< typename T > void __attribute__((deprecated))
+Test<T>::test_func()
+{
+}
+
+#line 20 ""implement_template.cpp""
+
+template< typename T > template<
+  typename X, 
+  typename X2 
+> void __attribute__((deprecated))
+Test<T>::test_func2<X,X2>()
+{
+}
+
+#endif "
+31,C,"
+#ifndef _ASM_IA64_VT_H
+#define _ASM_IA64_VT_H
+
+#include <public/hvm/ioreq.h>
+#include <asm/ia64_int.h>
+
+#define vmx_user_mode(regs) (((struct ia64_psr *)&(regs)->cr_ipsr)->vm == 1)
+
+#define VCPU_LID(v) (((u64)(v)->vcpu_id)<<24)
+
+extern void identify_vmx_feature(void);
+extern unsigned int vmx_enabled;
+extern void *vmx_init_env(void *start, unsigned long end_in_pa);
+extern int vmx_final_setup_guest(struct vcpu *v);
+extern void vmx_save_state(struct vcpu *v);
+extern void vmx_load_state(struct vcpu *v);
+extern int vmx_setup_platform(struct domain *d);
+extern void vmx_do_resume(struct vcpu *v);
+extern void vmx_io_assist(struct vcpu *v);
+extern IA64FAULT ia64_hypercall (struct pt_regs *regs);
+extern unsigned long __gpfn_to_mfn_foreign(struct domain *d, unsigned long gpfn);
+extern void set_privileged_operation_isr (struct vcpu *vcpu,int inst);
+extern void set_rsv_reg_field_isr (struct vcpu *vcpu);
+extern void vmx_relinquish_guest_resources(struct domain *d);
+extern void vmx_relinquish_vcpu_resources(struct vcpu *v);
+extern void vmx_send_assist_req(struct vcpu *v);
+extern void deliver_pal_init(struct vcpu *vcpu);
+extern void vmx_pend_pal_init(struct domain *d);
+extern void vmx_lazy_load_fpu(struct vcpu *vcpu);
+
+static inline vcpu_iodata_t *get_vio(struct vcpu *v)
+{
+    struct domain *d = v->domain;
+    shared_iopage_t *p = (shared_iopage_t *)d->arch.vmx_platform.ioreq.va;
+    ASSERT((v == current) || spin_is_locked(&d->arch.vmx_platform.ioreq.lock));
+    ASSERT(d->arch.vmx_platform.ioreq.va != NULL);
+    return &p->vcpu_iodata[v->vcpu_id];
+}
+#endif "
+32,C,"
+#ifndef JUBATUS_UTIL_LANG_WEAK_PTR_H_
+#define JUBATUS_UTIL_LANG_WEAK_PTR_H_
+
+#include <memory>
+#ifdef __GLIBCXX__
+#include <tr1/memory>
+#endif
+
+namespace jubatus {
+namespace util {
+namespace lang {
+
+namespace detail {
+#ifdef __GLIBCXX__
+namespace weak_ptr_ns = ::std::tr1;
+#else
+namespace weak_ptr_ns = ::std;
+#endif
+}
+
+template <class T, class TM>
+class shared_ptr;
+
+template <class T>
+class weak_ptr : public detail::weak_ptr_ns::weak_ptr<T> {
+  typedef detail::weak_ptr_ns::weak_ptr<T> base;
+
+public:
+  weak_ptr() {}
+
+  template <class U, class UM>
+  weak_ptr(const shared_ptr<U, UM>& p) : base(p) {}
+
+  template <class U>
+  weak_ptr(const weak_ptr<U>& p) : base(p) {}
+
+  template <class U>
+  weak_ptr& operator=(const weak_ptr<U>& p) {
+    base::operator=(p);
+    return *this;
+  }
+
+  template <class U, class UM>
+  weak_ptr& operator=(const shared_ptr<U, UM>& p) {
+    base::operator=(p);
+    return *this;
+  }
+
+  shared_ptr<T> lock() const {
+    return shared_ptr<T>(base::lock());
+  }
+};
+
+} 
+} 
+} 
+#endif "
+33,C,"#include ""GenericTaskDeclarations.h""
+
+#include ""GenericSharedDeclarations.h""
+#include ""GenericSyncDeclarations.h""
+#include <stdlib.h>
+#include <string.h>
+
+GenericTaskDeclarations_VoidFuture_t GenericTaskDeclarations_runTaskAndGetVoidFuture(GenericTaskDeclarations_Task_t task) 
+{
+  pthread_t pth;
+  if ( task.argsSize == 0 ) 
+  {
+    pthread_create(&pth,0,task.fun,0);
+  }  else 
+  {
+    void* args = malloc(task.argsSize);
+    memcpy(args,task.args,task.argsSize);
+    pthread_create(&pth,0,task.fun,args);
+  }
+  return (GenericTaskDeclarations_VoidFuture_t){ .pth = pth };
+}
+
+void GenericTaskDeclarations_saveAndJoinVoidFuture(GenericTaskDeclarations_VoidFuture_t future) 
+{
+  GenericTaskDeclarations_joinVoidFuture(&future);
+}
+
+void* GenericTaskDeclarations_saveFutureAndGetResult(GenericTaskDeclarations_Future_t future) 
+{
+  GenericTaskDeclarations_getFutureResult(&future);
+}
+
+GenericTaskDeclarations_Future_t GenericTaskDeclarations_runTaskAndGetFuture(GenericTaskDeclarations_Task_t task) 
+{
+  pthread_t pth;
+  if ( task.argsSize == 0 ) 
+  {
+    pthread_create(&pth,0,task.fun,0);
+  }  else 
+  {
+    void* args = malloc(task.argsSize);
+    memcpy(args,task.args,task.argsSize);
+    pthread_create(&pth,0,task.fun,args);
+  }
+  return (GenericTaskDeclarations_Future_t){ .pth = pth };
+}
+
+void* GenericTaskDeclarations_getFutureResult(GenericTaskDeclarations_Future_t* future) 
+{
+  if ( !(future->finished) ) 
+  {
+    pthread_join(future->pth,&(future->result));
+    future->finished = true;
+  }
+  return future->result;
+}
+
+void GenericTaskDeclarations_joinVoidFuture(GenericTaskDeclarations_VoidFuture_t* future) 
+{
+  if ( !(future->finished) ) 
+  {
+    pthread_join(future->pth,0);
+    future->finished = true;
+  }
+}
+"
+34,C,"
+#ifndef PROPERTYREADER_H
+#define PROPERTYREADER_H
+
+#include <QObject>
+
+class PropertyReader : public QObject
+{
+    Q_OBJECT
+public:
+    explicit PropertyReader(QObject *parent = 0);
+
+    void readProperties(QString propFile);
+
+    QString appVersion();
+    QString appName();
+    QString appDesc();
+
+    QString authorName();
+    QString authorEmail();
+
+    int windowMaxWidth();
+    int windowMaxHeight();
+    int windowMinWidth();
+    int windowMinHeight();
+    int windowFixedWidth();
+    int windowFixedHeight();
+    bool windowMaximized();
+    bool windowHideTitleBar();
+
+    bool isAppVersionSet();
+    bool isAppNameSet();
+    bool isAppDescSet();
+    bool isAuthorNameSet();
+    bool isAuthorEmailSet();
+    bool isWindowMaxWidthSet();
+    bool isWindowMaxHeightSet();
+    bool isWindowMinWidthSet();
+    bool isWindowMinHeightSet();
+    bool isWindowFixedWidthSet();
+    bool isWindowFixedHeightSet();
+    bool isWindowMaximizedSet();
+    bool isWindowHideTitleBarSet();
+
+private:
+    QString _appVersion;
+    QString _appName;
+    QString _appDesc;
+
+    QString _authorName;
+    QString _authorEmail;
+
+    int _winMaxWidth;
+    int _winMaxHeight;
+    int _winMinWidth;
+    int _winMinHeight;
+    int _winFixedWidth;
+    int _winFixedHeight;
+    bool _winMaximized;
+    bool _winHideTitleBar;
+
+    bool _isAppVersionSet;
+    bool _isAppNameSet;
+    bool _isAppDescSet;
+    bool _isAuthorNameSet;
+    bool _isAuthorEmailSet;
+    bool _isWinMaxWidthSet;
+    bool _isWinMaxHeightSet;
+    bool _isWinMinWidthSet;
+    bool _isWinMinHeightSet;
+    bool _isWinFixedWidthSet;
+    bool _isWinFixedHeightSet;
+    bool _isWinMaximizedSet;
+    bool _isWinHideTitleBarSet;
+
+signals:
+
+public slots:
+
+};
+
+#endif "
+35,C,"#ifndef AGENT_H
+#define AGENT_H
+
+#include <boost/shared_ptr.hpp>
+#include <agent/lockable.h>
+
+namespace boost {
+class thread;
+}
+typedef boost::shared_ptr<boost::thread> ThreadPtr;
+
+class Agent : public SharedLockable
+{
+public:
+  Agent() : SharedLockable(), quitting_(false), running_(false) {}
+  
+  virtual ~Agent() {}
+
+  void quit();
+  void stop();
+  bool running();
+  void run();
+  virtual void _run() = 0;
+  
+  ThreadPtr launch();
+  ThreadPtr thread() const { return thread_; }
+
+  void detach();
+
+protected:
+  ThreadPtr thread_;
+  bool quitting_;
+  bool running_;
+};
+
+#endif "
+36,C,"
+#ifndef QT_OS2_H
+#define QT_OS2_H
+
+#include ""qwindowdefs.h""
+
+#define INCL_BASE
+#define INCL_PM
+#include <os2.h>
+
+#include <API_FPU_CW_Wrappers.h>
+
+#if !defined(QT_OS2_NO_SYSEXCEPTIONS)
+
+enum QtOS2SysXcptReq
+{
+    QtOS2SysXcptReq_AppName = 0,
+    QtOS2SysXcptReq_AppVer = 1,
+    QtOS2SysXcptReq_ReportTo = 2,
+    QtOS2SysXcptReq_ReportSubj = 3,
+};
+
+typedef void (*QtOS2SysXcptWriter)( const char *str );
+typedef int (*QtOS2SysXcptCallback)( QtOS2SysXcptReq req,
+                                     QtOS2SysXcptWriter writer,
+                                     int reserved );
+
+class Q_EXPORT QtOS2SysXcptMainHandler
+{
+public:
+    QtOS2SysXcptMainHandler( QtOS2SysXcptCallback cb = NULL );
+    ~QtOS2SysXcptMainHandler();
+
+    class Private;
+    
+private:
+    EXCEPTIONREGISTRATIONRECORD rec;
+    
+    static bool installed;
+    static QtOS2SysXcptCallback callback;
+    static ERR libcHandler;
+
+    static ULONG  handler( PEXCEPTIONREPORTRECORD pReportRec,
+                                         PEXCEPTIONREGISTRATIONRECORD pRegRec,
+                                         PCONTEXTRECORD pContextRec,
+                                         PVOID pv );
+
+    friend class QtOS2SysXcptMainHandlerInternal;
+    friend class QThreadInstance;
+
+    QtOS2SysXcptMainHandler( QtOS2SysXcptMainHandler & ) {}
+    QtOS2SysXcptMainHandler &operator =( QtOS2SysXcptMainHandler &) {
+        return *this;
+    }
+    static void *operator new( size_t  ) throw() { return NULL; }
+    static void operator delete( void * ) {}    
+};
+
+#endif 
+
+#endif "
+37,C,"#include <pthread.h>
+#include <stdio.h>
+#include <string.h>
+#include <errno.h>
+#include <unistd.h>
+#include <assert.h>
+
+#define THREAD_SIZE 8
+
+void *job1(void *arg)
+{
+    pthread_t pid = pthread_self();
+    sleep(1);
+    printf(""job1: print %p\n"", arg);
+    printf(""job1: pthread_self: %lu\n"", pid);
+    sleep(1);
+
+    return arg;
+}
+
+void *job2(void *arg)
+{
+    pthread_t pid = pthread_self();
+    sleep(1);
+    printf(""job2: print %p\n"", arg);
+    printf(""job2: pthread_self: %lu\n"", pid);
+    sleep(1);
+    pthread_exit(NULL);
+
+    return arg;
+}
+
+void *job3(void *arg)
+{
+    pthread_t pid = pthread_self();
+    pthread_detach(pid);
+    sleep(1);
+    printf(""job3: print %p\n"", arg);
+    printf(""job3: pthread_self: %lu\n"", pid);
+    sleep(1);
+
+    return arg;
+}
+
+void *job4(void *arg)
+{
+    pthread_t pid = pthread_self();
+    pthread_detach(pid);
+    sleep(1);
+    printf(""job4: print %p\n"", arg);
+    printf(""job4: pthread_self: %lu\n"", pid);
+    sleep(1);
+
+    return arg;
+}
+
+int main()
+{
+    pthread_t tid1[THREAD_SIZE];
+    pthread_t tid2[THREAD_SIZE];
+    pthread_t tid3[THREAD_SIZE];
+    pthread_t tid4[THREAD_SIZE];
+    int i;
+    void *res;
+
+    for (i = 0; i < THREAD_SIZE; i++) {
+        assert(pthread_create(&tid1[i], NULL, job1, (void*)i) == 0);
+        assert(pthread_create(&tid2[i], NULL, job2, (void*)i) == 0);
+        assert(pthread_create(&tid3[i], NULL, job3, (void*)i) == 0);
+        assert(pthread_create(&tid4[i], NULL, job4, (void*)i) == 0);
+    }
+
+    for (i = 0; i < THREAD_SIZE; i++) {
+        assert(pthread_join(tid1[i], &res) == 0);
+        assert(res == (void*)i);
+        assert(pthread_join(tid2[i], &res) == 0);
+        assert(res == NULL);
+    }
+
+    return 0;
+}"
+38,C,"
+#ifndef CHROME_BROWSER_BROWSING_DATA_MOCK_BROWSING_DATA_FILE_SYSTEM_HELPER_H_
+#define CHROME_BROWSER_BROWSING_DATA_MOCK_BROWSING_DATA_FILE_SYSTEM_HELPER_H_
+
+#include <list>
+#include <map>
+#include <string>
+
+#include ""base/callback.h""
+#include ""base/compiler_specific.h""
+#include ""chrome/browser/browsing_data/browsing_data_file_system_helper.h""
+
+class MockBrowsingDataFileSystemHelper : public BrowsingDataFileSystemHelper {
+ public:
+  explicit MockBrowsingDataFileSystemHelper(Profile* profile);
+
+  void StartFetching(
+      const base::Callback<void(const std::list<FileSystemInfo>&)>& callback)
+      override;
+  void DeleteFileSystemOrigin(const GURL& origin) override;
+
+  void AddFileSystem(const GURL& origin,
+                     bool has_persistent,
+                     bool has_temporary,
+                     bool has_syncable);
+
+  void AddFileSystemSamples();
+
+  void Notify();
+
+  void Reset();
+
+  bool AllDeleted();
+
+  GURL last_deleted_origin_;
+
+ private:
+  ~MockBrowsingDataFileSystemHelper() override;
+
+  base::Callback<void(const std::list<FileSystemInfo>&)> callback_;
+
+  std::map<const std::string, bool> file_systems_;
+
+  std::list<FileSystemInfo> response_;
+
+  DISALLOW_COPY_AND_ASSIGN(MockBrowsingDataFileSystemHelper);
+};
+
+#endif  "
+39,C,"#import <Cocoa/Cocoa.h>
+
+#import ""SpectacleShortcutRecorderDelegate.h""
+
+@class SpectacleShortcutManager;
+
+@interface SpectacleShortcutRecorderCell : NSCell
+
+@property (nonatomic) SpectacleShortcutRecorder *shortcutRecorder;
+@property (nonatomic) NSString *shortcutName;
+@property (nonatomic) SpectacleShortcut *shortcut;
+@property (nonatomic, assign) id<SpectacleShortcutRecorderDelegate> delegate;
+@property (nonatomic) NSArray *additionalShortcutValidators;
+@property (nonatomic) SpectacleShortcutManager *shortcutManager;
+
+#pragma mark -
+
+- (BOOL)resignFirstResponder;
+
+#pragma mark -
+
+- (BOOL)performKeyEquivalent:(NSEvent *)event;
+
+- (void)flagsChanged:(NSEvent *)event;
+
+@end"
+40,C,"
+#ifndef NCPopupTextEntry_h
+#define NCPopupTextEntry_h
+
+#include <iosfwd>
+
+#include ""NCPopup.h""
+#include ""NCInputField.h""
+
+class NCPopupTextEntry : public NCPopup
+{
+private:
+
+    NCPopupTextEntry & operator=( const NCPopupTextEntry & );
+    NCPopupTextEntry( const NCPopupTextEntry & );
+
+    NCInputField * wtext;
+
+    virtual bool postAgain();
+
+public:
+
+    NCPopupTextEntry( const wpos at,
+		      const std::string & label,
+		      const std::string & text,
+		      unsigned maxInput  = 0,
+		      unsigned maxFld	 = 0,
+		      NCInputField::FTYPE t = NCInputField::PLAIN );
+
+    virtual ~NCPopupTextEntry();
+
+    void   setValue( const std::string & ntext ) { wtext->setValue( ntext ); }
+
+    std::string value() { return wtext->value(); }
+};
+
+#endif "
+41,C,"#ifndef EVAPPLICATION_H
+#define EVAPPLICATION_H
+
+#include <QObject>
+#include ""EvGlobal.h""
+
+class EvApplicationPrivate;
+class EvApplicationSettings;
+class EvMessagesManager;
+class EvJobsManager;
+class EvApplicationArgumentsManager;
+class EvIconsFactory ;
+class EvSession;
+class EvPluginsManager;
+class QAction;
+class EvObject;
+class EvApplicationObjects;
+class EvApplicationDocumentation;
+
+#define evApp EvApplication::instance()
+
+class EvApplication : public QObject
+{
+    Q_OBJECT
+    Q_PROPERTY(QStringList pluginsDirectories READ pluginsDirectories WRITE setPluginsDirectories)
+    Q_PROPERTY(bool defaultYesNoQuestionReply READ defaultYesNoQuestionReply WRITE setDefaultYesNoQuestionReply NOTIFY defaultYesNoQuestionReplyChanged)
+
+public:
+
+    enum Mode {
+        Batch,
+        Graphical
+    };
+
+    EvApplication();
+    ~EvApplication();
+    Mode mode()const;
+
+    void create();
+    static EvApplication *instance();
+
+    QStringList pluginsDirectories() const;
+    void setPluginsDirectories(const QStringList & arg);
+    void loadPlugins();
+    void loadPluginsFromDirectory(const QString & path);
+    void loadPluginsFromLibrary(const QString & path);
+
+    EvApplicationObjects * applicationObjects()const;
+    bool isObjectValid(EvObject*)const;
+
+    EvMessagesManager* messagesManager()const;
+    EvApplicationSettings* settings()const;
+    EvJobsManager* jobsManager()const;
+    EvApplicationArgumentsManager* argumentsManager()const;
+    EvIconsFactory* iconsFactory()const;
+    EvPluginsManager *pluginsManager()const;
+    EvApplicationDocumentation * documentation()const;
+
+    EvSession* currentSession()const;
+
+    bool defaultYesNoQuestionReply() const;
+
+public Q_SLOTS:
+    void setDefaultYesNoQuestionReply(bool arg);
+
+Q_SIGNALS:
+    void defaultYesNoQuestionReplyChanged(bool arg);
+
+protected:
+    void handleArguments();
+    void runScript(const QString & path);
+
+private:
+    EV_PRIVATE(EvApplication)
+
+};
+
+#endif "
+42,C,"
+#ifndef MBED_BUSIN_H
+#define MBED_BUSIN_H
+
+#include ""platform.h""
+#include ""PinNames.h""
+#include ""PeripheralNames.h""
+#include ""Base.h""
+#include ""DigitalIn.h""
+
+namespace mbed {
+
+class BusIn : public Base {
+
+public:
+
+    BusIn(PinName p0, PinName p1 = NC, PinName p2 = NC, PinName p3 = NC,
+          PinName p4 = NC, PinName p5 = NC, PinName p6 = NC, PinName p7 = NC,
+          PinName p8 = NC, PinName p9 = NC, PinName p10 = NC, PinName p11 = NC,
+          PinName p12 = NC, PinName p13 = NC, PinName p14 = NC, PinName p15 = NC, 
+          const char *name = NULL);
+
+    BusIn(PinName pins[16], const char *name = NULL);
+		
+	virtual ~BusIn();
+	
+    int read();
+
+#ifdef MBED_OPERATORS
+    
+    operator int();
+#endif
+
+#ifdef MBED_RPC
+    virtual const struct rpc_method *get_rpc_methods();
+    static struct rpc_class *get_rpc_class();
+#endif
+
+protected:
+	
+    DigitalIn* _pin[16];
+
+#ifdef MBED_RPC    
+    static void construct(const char *arguments, char *res);
+#endif
+
+};
+
+} 
+
+#endif
+"
+43,C,"
+#ifndef  _SO_SWITCH_
+#define  _SO_SWITCH_
+
+#include <Inventor/fields/SoSFInt32.h>
+#include <Inventor/nodes/SoGroup.h>
+
+#define SO_SWITCH_NONE		(-1)	
+#define SO_SWITCH_INHERIT	(-2)	
+#define SO_SWITCH_ALL		(-3)	
+
+class INVENTOR_API SoSwitch : public SoGroup {
+
+    SO_NODE_HEADER(SoSwitch);
+
+  public:
+    
+    SoSFInt32		whichChild;	
+
+    SoSwitch();
+
+    SoSwitch(int nChildren);
+
+    virtual SbBool	affectsState() const;
+
+  SoEXTENDER public:
+    
+    virtual void	doAction(SoAction *action);
+    virtual void	callback(SoCallbackAction *action);
+    virtual void	GLRender(SoGLRenderAction *action);
+    virtual void	pick(SoPickAction *action);
+    virtual void	getBoundingBox(SoGetBoundingBoxAction *action);
+    virtual void	handleEvent(SoHandleEventAction *action);
+    virtual void	getMatrix(SoGetMatrixAction *action);
+    virtual void	search(SoSearchAction *action);
+    virtual void	write(SoWriteAction *action);
+
+  SoINTERNAL public:
+    static void		initClass();
+
+  protected:
+    
+    void		traverseChildren(SoAction *action);
+
+    virtual ~SoSwitch();
+
+  private:
+    
+    void		doChild(SoAction *action, int matchIndex = -1);
+};
+
+#endif "
+44,C,"
+#ifndef __MATRIXTV__
+#define __MATRIXTV__
+
+#include ""BaseEffecTV.h""
+
+class MatrixTV : public BaseEffecTV {
+	typedef BaseEffecTV super;
+
+protected:
+	struct Blip {
+		int mode;
+		int y;
+		int timer;
+		int speed;
+	};
+
+	int show_info;
+	int mode;
+	int pause;
+	int mapW;
+	int mapH;
+	unsigned char* cmap;
+	unsigned char* vmap;
+	unsigned char* img;
+	unsigned char* font;
+	RGB32* palette;
+	Blip* blips;
+
+	virtual void intialize(bool reset);
+	virtual int readConfig();
+	virtual int writeConfig();
+
+public:
+	MatrixTV(void);
+	virtual ~MatrixTV(void);
+	virtual const char* name(void);
+	virtual const char* title(void);
+	virtual const char** funcs(void);
+	virtual int start(Utils* utils, int width, int height);
+	virtual int stop(void);
+	virtual int draw(YUV* src_yuv, RGB32* dst_rgb, char* dst_msg);
+	virtual const char* event(int key_code);
+	virtual const char* touch(int action, int x, int y);
+
+protected:
+	RGB32 green(unsigned int v);
+	int setPalette(void);
+	int setPattern(void);
+	void drawChar(RGB32* dst, unsigned char c, unsigned char v);
+	void createImg(RGB32* src);
+	void updateCharMap(void);
+
+	void darkenColumn(int);
+	void blipNone(int x);
+	void blipFall(int x);
+	void blipStop(int x);
+	void blipSlide(int x);
+};
+
+#endif "
+45,C,"
+#ifndef _lucene_index_Term_
+#define _lucene_index_Term_
+
+CL_NS_DEF(index)
+
+class CLUCENE_EXPORT Term:LUCENE_REFBASE {
+private:
+  size_t cachedHashCode;
+	const TCHAR* _field;
+	
+#ifdef LUCENE_TERM_TEXT_LENGTH
+	TCHAR _text[LUCENE_TERM_TEXT_LENGTH+1];
+#else
+	TCHAR* _text;
+	size_t textLenBuf; 
+	
+#endif
+	size_t textLen; 
+	bool    internF; 
+public:
+	
+	Term(const Term* fieldTerm, const TCHAR* txt);
+		
+	Term();
+	
+	Term(const TCHAR* fld, const TCHAR* txt, bool internField);
+
+	Term(const TCHAR* fld, const TCHAR* txt);
+	
+	~Term();
+
+	const TCHAR* field() const; 
+
+	const TCHAR* text() const; 
+	
+	inline void set(const TCHAR* fld, const TCHAR* txt){
+		set(fld,txt,true);
+	}
+	
+	void set(const Term* term, const TCHAR* txt);
+
+	void set(const TCHAR* fld, const TCHAR* txt, const bool internField);
+
+	int32_t compareTo(const Term* other) const;
+	
+	int32_t hashedCompareTo(Term* other);
+
+	bool equals(const Term* other) const;
+
+	size_t textLength() const;
+
+	TCHAR* toString() const;
+
+	size_t hashCode();
+};
+
+class Term_UnorderedCompare:LUCENE_BASE, public CL_NS(util)::Compare::_base 
+{
+public:
+	bool operator()( Term* t1, Term* t2 ) const{
+		return ( t1->hashedCompareTo(t2) < 0 );
+	}
+	size_t operator()( Term* t ) const{
+		return t->hashCode();
+	}
+};
+
+CL_NS_END
+#endif"
+46,C,"#include ""plugin_renderer_gl/events.h""
+#include ""plugin_renderer_gl/window.h""
+#include ""framework/log.h""
+#include ""util/pstdint.h""
+#include ""glfw3.h""
+
+void
+key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
+{
+	uint32_t k = (uint32_t)key;
+	if(action == GLFW_PRESS)
+	{
+		EVENT_FIRE1(evt_key_press, k);
+	}
+	if(action == GLFW_RELEASE)
+	{
+		EVENT_FIRE1(evt_key_release, k);
+	}
+}
+
+void
+mouse_position_callback(GLFWwindow* window, double xpos, double ypos)
+{
+	
+	double norm_x, norm_y;
+	norm_x = (xpos * 2.0 / (double)window_width()) - 1.0;
+	norm_y = 1.0 - (ypos * 2.0 / (double)window_height());
+	EVENT_FIRE2(evt_mouse_move, norm_x, norm_y);
+}
+
+void
+mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
+{
+	uint32_t button_cast = (uint32_t)button;
+	if(action == GLFW_PRESS)
+	{
+		EVENT_FIRE1(evt_mouse_button_press, button_cast);
+	}
+	if(action == GLFW_RELEASE)
+	{
+		EVENT_FIRE1(evt_mouse_button_release, button_cast);
+	}
+}
+
+void
+scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
+{
+	uint32_t xoffset_cast = (uint32_t)xoffset;
+	uint32_t yoffset_cast = (uint32_t)yoffset;
+	EVENT_FIRE2(evt_mouse_scroll, xoffset_cast, yoffset_cast);
+}"
+47,C,"
+#ifndef __cppsupport_events_h
+#define __cppsupport_events_h
+
+#include ""kdevdeepcopy.h""
+
+#include <qevent.h>
+#include <qvaluelist.h>
+
+#if QT_VERSION < 0x030100
+#include <kdevmutex.h>
+#else
+#include <qmutex.h>
+#endif
+
+enum
+{
+    Event_FileParsed = QEvent::User + 1000
+};
+
+class FileParsedEvent: public QCustomEvent
+{
+public:
+	FileParsedEvent( const QString& fileName, const QValueList<Problem>& problems, bool fromDisk = false )
+		: QCustomEvent( Event_FileParsed ), m_fileName( deepCopy( fileName ) ), m_fromDisk( fromDisk )
+	{
+		
+		QValueListConstIterator<Problem> it = problems.begin();
+		while ( it != problems.end() )
+		{
+			Problem p = *it;
+			m_problems.append( Problem( deepCopy( p.text() ), p.line(), p.column(), p.level() ) );
+  		    m_problems.back().setFileName( deepCopy( p.fileName() ) );
+			++it;
+		}
+	}
+
+	QString fileName() const
+	{
+		return m_fileName;
+	}
+	QValueList<Problem> problems() const
+	{
+		return m_problems;
+	}
+
+	bool fromDisk() {
+		return m_fromDisk;
+	}
+
+private:
+	QString m_fileName;
+	QValueList<Problem> m_problems;
+	bool m_fromDisk;
+
+private:
+	FileParsedEvent( const FileParsedEvent& source );
+	void operator = ( const FileParsedEvent& source );
+};
+
+#endif 
+"
+48,C,"
+#ifndef UTILS_H_
+#define UTILS_H_
+
+#define COS120 -0.5
+#define SIN120 0.8660254037844386
+
+#define SQR(x) ((x) * (x))
+#define SCALAR(x, y) ((x)[0]*(y)[0] + (x)[1]*(y)[1] + (x)[2]*(y)[2])
+
+#define MATRIX_VECTOR_MULTIPLICATION(m, v, result) {\
+	(result)[0] = (m)[0][0]*(v)[0] + (m)[0][1]*(v)[1] + (m)[0][2]*(v)[2];\
+	(result)[1] = (m)[1][0]*(v)[0] + (m)[1][1]*(v)[1] + (m)[1][2]*(v)[2];\
+	(result)[2] = (m)[2][0]*(v)[0] + (m)[2][1]*(v)[1] + (m)[2][2]*(v)[2];\
+}
+
+#include ""defs.h""
+
+void set_patches(System *syst, PatchyParticle *p);
+
+void set_vector(vector v, double x, double y, double z);
+void set_base_orientation(matrix orient);
+void cross(vector v1, vector v2, vector res);
+void normalize(vector v);
+void matrix_matrix_multiplication(matrix m, matrix n, matrix res);
+
+void random_vector_on_sphere(vector res);
+void random_orientation(System *syst, matrix orient);
+void get_rotation_matrix(vector axis, double t, matrix rotation_matrix);
+void place_inside_vbonding(System *syst, PatchyParticle *rec, vector r, matrix orient, int rec_patch);
+void utils_rotate_matrix(matrix orient_old, matrix orient_new, vector axis, double t);
+void get_rotated_vector(vector v, vector axis, double t, vector res);
+void rotate_vector(vector v, vector axis, double t);
+void set_orientation_around_vector(vector v, matrix orient, double t);
+void gram_schmidt(vector v1, vector v2, vector v3);
+void utils_reset_acceptance_counters(System *syst);
+
+#endif "
+49,C,"
+#include ""precomp.h""
+
+#define LCDTIMING0_PPL(x) 		((((x) / 16 - 1) & 0x3f) << 2)
+#define LCDTIMING1_LPP(x) 		(((x) & 0x3ff) - 1)
+#define LCDCONTROL_LCDPWR		(1 << 11)
+#define LCDCONTROL_LCDEN		(1)
+#define LCDCONTROL_LCDBPP(x)	(((x) & 7) << 1)
+#define LCDCONTROL_LCDTFT		(1 << 5)
+
+#define PL110_LCDTIMING0	(PVOID)0x10120000
+#define PL110_LCDTIMING1	(PVOID)0x10120004
+#define PL110_LCDTIMING2	(PVOID)0x10120008
+#define PL110_LCDUPBASE		(PVOID)0x10120010
+#define PL110_LCDLPBASE		(PVOID)0x10120014
+#define PL110_LCDCONTROL	(PVOID)0x10120018
+
+PUSHORT LlbHwVideoBuffer;
+
+VOID
+NTAPI
+LlbHwVersaClcdInitialize(VOID)
+{
+    
+    WRITE_REGISTER_ULONG(PL110_LCDUPBASE, (ULONG)LlbHwGetFrameBuffer());
+    WRITE_REGISTER_ULONG(PL110_LCDLPBASE, (ULONG)LlbHwGetFrameBuffer());
+    
+	WRITE_REGISTER_ULONG(PL110_LCDTIMING0, LCDTIMING0_PPL(LlbHwGetScreenWidth()));
+	WRITE_REGISTER_ULONG(PL110_LCDTIMING1, LCDTIMING1_LPP(LlbHwGetScreenHeight()));
+    
+	WRITE_REGISTER_ULONG(PL110_LCDCONTROL,
+                         LCDCONTROL_LCDEN |
+                         LCDCONTROL_LCDTFT |
+                         LCDCONTROL_LCDPWR |
+                         LCDCONTROL_LCDBPP(4));
+}
+
+ULONG
+NTAPI
+LlbHwGetScreenWidth(VOID)
+{
+    return 720;
+}
+ 
+ULONG
+NTAPI
+LlbHwGetScreenHeight(VOID)
+{
+    return 400;
+}
+
+PVOID
+NTAPI
+LlbHwGetFrameBuffer(VOID)
+{
+    return (PVOID)0x000A0000;
+}
+
+ULONG
+NTAPI
+LlbHwVideoCreateColor(IN ULONG Red,
+                      IN ULONG Green,
+                      IN ULONG Blue)
+{
+    return (((Blue >> 3) << 11)| ((Green >> 2) << 5)| ((Red >> 3) << 0));
+}
+"
+50,Java,"
+package io.dropwizard.metrics;
+
+import org.junit.Test;
+
+import io.dropwizard.metrics.SlidingWindowReservoir;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+public class SlidingWindowReservoirTest {
+    private final SlidingWindowReservoir reservoir = new SlidingWindowReservoir(3);
+
+    @Test
+    public void handlesSmallDataStreams() throws Exception {
+        reservoir.update(1);
+        reservoir.update(2);
+
+        assertThat(reservoir.getSnapshot().getValues())
+                .containsOnly(1, 2);
+    }
+
+    @Test
+    public void onlyKeepsTheMostRecentFromBigDataStreams() throws Exception {
+        reservoir.update(1);
+        reservoir.update(2);
+        reservoir.update(3);
+        reservoir.update(4);
+
+        assertThat(reservoir.getSnapshot().getValues())
+                .containsOnly(2, 3, 4);
+    }
+}"
+51,Java,"package org.asciicerebrum.neocortexengine.domain.core.particles;
+
+public class EventFact extends StringParticle {
+
+    public EventFact(final String eventFactInput) {
+        this.setValue(eventFactInput);
+    }
+
+    @Override
+    public final boolean equals(final Object obj) {
+        if (!(obj instanceof EventFact)) {
+            return false;
+        }
+        if (obj == this) {
+            return true;
+        }
+        return this.equalsHelper(obj);
+    }
+
+    @Override
+    public final int hashCode() {
+        return this.hashCodeHelper();
+    }
+
+}"
+52,Java,"
+package com.b2international.snowowl.datastore.request.job;
+
+import com.b2international.snowowl.core.ServiceProvider;
+import com.b2international.snowowl.core.events.Request;
+import com.b2international.snowowl.datastore.remotejobs.RemoteJobTracker;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
+final class CancelJobRequest implements Request<ServiceProvider, Boolean> {
+	
+	private static final long serialVersionUID = 1L;
+	
+	@JsonProperty
+	private final String id;
+
+	CancelJobRequest(String id) {
+		this.id = id;
+	}
+
+	@Override
+	public Boolean execute(ServiceProvider context) {
+		context.service(RemoteJobTracker.class).requestCancel(id);
+		return Boolean.TRUE;
+	}
+
+}"
+53,Java,"package com.github.sherter.googlejavaformatgradleplugin.format;
+
+import com.google.common.collect.ImmutableList;
+
+public class Gjf {
+
+  public static final String GROUP_ID = ""com.google.googlejavaformat"";
+  public static final String ARTIFACT_ID = ""google-java-format"";
+
+  public static final ImmutableList<String> SUPPORTED_VERSIONS =
+      ImmutableList.of(""1.0"", ""1.1"", ""1.2"", ""1.3"", ""1.4"", ""1.5"", ""1.6"", ""1.7"", ""1.8"", ""1.9"", ""1.10.0"", ""1.11.0"");
+
+  public static Formatter newFormatter(ClassLoader classLoader, Configuration config)
+      throws ReflectiveOperationException {
+    return newFormatterFactory(classLoader, config).create();
+  }
+
+  private static FormatterFactory newFormatterFactory(
+      ClassLoader classLoader, Configuration config) {
+    switch (config.version) {
+      case ""1.0"":
+        return new OneDotZeroFactory(classLoader, config);
+      case ""1.1"":
+      case ""1.2"":
+      case ""1.3"":
+      case ""1.4"":
+      case ""1.5"":
+      case ""1.6"":
+      case ""1.7"":
+        return new OneDotOneFactory(classLoader, config);
+      case ""1.8"":
+      case ""1.9"":
+      case ""1.10.0"":
+      case ""1.11.0"":
+      default:
+        return new OneDotEightFactory(classLoader, config);
+    }
+  }
+}"
+54,Java,"
+package graphfinder2.typedGraph.degree6;
+
+import graphfinder2.graph.Graph;
+import graphfinder2.graph.RingGraph;
+import graphfinder2.typedGraph.AbstractTypedGraph;
+import graphfinder2.typedGraph.AbstractTypedGraphCreator;
+import graphfinder2.typedGraph.TypedGraph;
+
+public class Chr6EdivOdivEdivOdiv extends AbstractTypedGraphCreator {
+
+	private static Chr6EdivOdivEdivOdiv instance = null;
+
+	private Chr6EdivOdivEdivOdiv() {
+		super(2, 4);
+	}
+
+	public synchronized static Chr6EdivOdivEdivOdiv getInstance() {
+		if (instance == null) {
+			instance = new Chr6EdivOdivEdivOdiv();
+		}
+		return instance;
+	}
+
+	public TypedGraph create(int nodeNumber, int... params) {
+		return new AbstractTypedGraph(this, nodeNumber, params) {
+
+			@Override
+			protected Graph createGraph(int nodeNUmber, int[] params) {
+				
+				RingGraph ringGraph = new RingGraph(nodeNumber);
+				
+				ringGraph.createDivisible(params[0], complexity, 0);
+				ringGraph.createDivisible(params[1], complexity, 1);
+				ringGraph.createDivisible(params[2], complexity, 0);
+				ringGraph.createDivisible(params[3], complexity, 1);
+				return ringGraph;
+			}
+		};
+
+	}
+
+	public boolean isValidNodeNumber(int nodeNumber) {
+		return nodeNumber % (complexity) == 0;
+	}
+
+	public boolean isValidParams(int nodeNumber, int[] params) {
+		return params[0] != params[2] && params[1] != params[3] && RingGraph.isValidDivisibleLength(nodeNumber, params[0], complexity) && RingGraph.isValidDivisibleLength(nodeNumber, params[1], complexity) && RingGraph.isValidDivisibleLength(nodeNumber, params[2], complexity) && RingGraph.isValidDivisibleLength(nodeNumber, params[3], complexity);
+	}
+
+	public boolean isOptimalParams(int nodeNumber, int[] params) {
+		return params[0] < params[1];
+	}
+}"
+55,Java,"package klaue.mcschematictool.blocktypes;
+
+public class Farmland extends Block {
+    
+    public Farmland(byte wetness) {
+        super((short) 60, wetness);
+        this.type = Type.FARMLAND;
+        if (wetness < 0 || wetness > 8) {
+            throw new IllegalArgumentException(""wetness "" + wetness + ""outside boundaries"");
+        }
+    }
+
+    public byte getWetness() {
+        return this.data;
+    }
+
+    public void setWetness(byte wetness) {
+        if (wetness < 0 || wetness > 8) {
+            throw new IllegalArgumentException(""wetness "" + wetness + ""outside boundaries"");
+        }
+        this.data = wetness;
+    }
+
+    @Override
+    public String toString() {
+        return super.toString() + "", wetness: "" + this.data;
+    }
+
+    @Override
+    public void setData(byte data) {
+        setWetness(data);
+    }
+}"
+56,Java,"package com.wabbit.libraries;
+
+import android.content.Context;
+
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.RandomAccessFile;
+import java.util.UUID;
+
+public class Installation {
+    private static String sID = null;
+    private static final String INSTALLATION = ""INSTALLATION"";
+
+    public synchronized static String id(Context context) {
+        if (sID == null) {  
+            File installation = new File(context.getFilesDir(), INSTALLATION);
+            try {
+                if (!installation.exists())
+                    writeInstallationFile(installation);
+                sID = readInstallationFile(installation);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        }
+        return sID;
+    }
+
+    private static String readInstallationFile(File installation) throws IOException {
+        RandomAccessFile f = new RandomAccessFile(installation, ""r"");
+        byte[] bytes = new byte[(int) f.length()];
+        f.readFully(bytes);
+        f.close();
+        return new String(bytes);
+    }
+
+    private static void writeInstallationFile(File installation) throws IOException {
+        FileOutputStream out = new FileOutputStream(installation);
+        String id = UUID.randomUUID().toString();
+        out.write(id.getBytes());
+        out.close();
+    }
+}"
+57,Java,"
+package org.eclipse.persistence.testing.jaxb.dynamic.util;
+
+import org.eclipse.persistence.config.DescriptorCustomizer;
+import org.eclipse.persistence.descriptors.ClassDescriptor;
+import org.eclipse.persistence.oxm.XMLField;
+import org.eclipse.persistence.oxm.mappings.XMLDirectMapping;
+
+public class PersonCustomizer implements DescriptorCustomizer {
+
+    public void customize(ClassDescriptor descriptor) throws Exception {
+        XMLDirectMapping nameMapping = (XMLDirectMapping) descriptor.getMappingForAttributeName(""name"");
+        XMLField nameField = (XMLField) nameMapping.getField();
+        nameField.setXPath(""contact-info/personal-info/name/text()"");
+    }
+
+}"
+58,Java,"package com.rabbitframework.security.web.filter.authz;
+
+import com.rabbitframework.security.web.filter.authz.PermissionsAuthorizationFilter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import javax.servlet.ServletRequest;
+import javax.servlet.ServletResponse;
+import java.io.IOException;
+
+public class UriPermissionsFilter extends PermissionsAuthorizationFilter {
+	private static final Logger logger = LoggerFactory.getLogger(UriPermissionsFilter.class);
+
+	@Override
+	public boolean isAccessAllowed(ServletRequest request, ServletResponse response, Object mappedValue)
+			throws IOException {
+		String requestUri = getPathWithinApplication(request);
+		if (logger.isDebugEnabled()) {
+			logger.debug(""requestUrl:"" + requestUri);
+		}
+		boolean result = super.isAccessAllowed(request, response, new String[] { requestUri });
+		return result;
+	}
+}"
+59,Java,"
+package org.apache.camel.component.netty;
+
+import org.apache.camel.builder.RouteBuilder;
+import org.apache.camel.component.mock.MockEndpoint;
+import org.junit.jupiter.api.Test;
+
+public class NettyInOutFromSedaTest extends BaseNettyTest {
+
+    @Test
+    public void testInOutIssue() throws Exception {
+        MockEndpoint mock = getMockEndpoint(""mock:result"");
+        mock.expectedBodiesReceivedInAnyOrder(""Bye A"", ""Bye B"", ""Bye C"");
+
+        template.sendBody(""seda:start"", ""A"");
+        template.sendBody(""seda:start"", ""B"");
+        template.sendBody(""seda:start"", ""C"");
+
+        assertMockEndpointsSatisfied();
+    }
+
+    @Override
+    protected RouteBuilder createRouteBuilder() throws Exception {
+        return new RouteBuilder() {
+            @Override
+            public void configure() throws Exception {
+                from(""seda:start"")
+                        .log(""before ${body}"")
+                        .to(""netty:tcp:
+                        .log(""after ${body}"")
+                        .to(""mock:result"");
+
+                from(""netty:tcp:
+                        .transform(body().prepend(""Bye ""));
+            }
+        };
+    }
+}"
+60,Java,"
+package org.diirt.util.text;
+
+import java.io.File;
+import java.io.FileReader;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import javax.swing.JFileChooser;
+import static org.diirt.util.text.StringUtil.DOUBLE_REGEX_WITH_NAN;
+
+public class CsvParserDebug {
+    public static void main(String[] args) throws Exception {
+        JFileChooser fc = new JFileChooser();
+        int result = fc.showOpenDialog(null);
+        if (result == JFileChooser.APPROVE_OPTION) {
+            File selectedFile = fc.getSelectedFile();
+            CsvParserResult parseResult = CsvParser.AUTOMATIC.parse(new FileReader(selectedFile));
+            for (int i = 0; i < parseResult.getColumnNames().size(); i++) {
+                String columnName = parseResult.getColumnNames().get(i);
+                Class<?> columnType = parseResult.getColumnTypes().get(i);
+                if (columnType == String.class) {
+                    System.out.println(columnName + "" - "" + columnType + "" - "" + nonNumberMatching((List<String>) parseResult.getColumnValues().get(i)));
+                } else {
+                    System.out.println(columnName + "" - "" + columnType);
+                }
+            }
+        }
+    }
+    
+    public static List<String> nonNumberMatching(List<String> strings) {
+        Matcher matcher = Pattern.compile(DOUBLE_REGEX_WITH_NAN).matcher("""");
+        List<String> nonMatching = new ArrayList<>();
+        for (String string : strings) {
+            if (!matcher.reset(string).matches()) {
+                nonMatching.add(string);
+            }
+        }
+        return nonMatching;
+    }
+}"
+61,Java,"
+package API.amazon.mws.xml.JAXB;
+
+import java.math.BigDecimal;
+import javax.xml.bind.annotation.XmlAccessType;
+import javax.xml.bind.annotation.XmlAccessorType;
+import javax.xml.bind.annotation.XmlAttribute;
+import javax.xml.bind.annotation.XmlType;
+import javax.xml.bind.annotation.XmlValue;
+
+@XmlAccessorType(XmlAccessType.FIELD)
+@XmlType(name = ""CurrentDimension"", propOrder = {
+    ""value""
+})
+public class CurrentDimension {
+
+    @XmlValue
+    protected BigDecimal value;
+    @XmlAttribute(name = ""unitOfMeasure"", required = true)
+    protected CurrentUnitOfMeasure unitOfMeasure;
+
+    public BigDecimal getValue() {
+        return value;
+    }
+
+    public void setValue(BigDecimal value) {
+        this.value = value;
+    }
+
+    public CurrentUnitOfMeasure getUnitOfMeasure() {
+        return unitOfMeasure;
+    }
+
+    public void setUnitOfMeasure(CurrentUnitOfMeasure value) {
+        this.unitOfMeasure = value;
+    }
+
+}"
+62,Java,"package com.flora.support;
+
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
+import java.io.StringWriter;
+import java.io.Writer;
+import java.util.Map;
+
+import org.apache.velocity.VelocityContext;
+import org.apache.velocity.app.VelocityEngine;
+import org.apache.velocity.context.Context;
+
+import com.flora.Config;
+
+public class VelocityTemplate {
+	private VelocityEngine velocityEngine;
+	private Config config;
+	public VelocityTemplate(){
+	}
+	public String parseTemplate(String template, Map model){
+		model.putAll(Config.getPageTools());
+		Context context = new VelocityContext(model);
+		Writer writer = new StringWriter();
+		try {
+			velocityEngine.mergeTemplate(template, ""UTF-8"", context, writer);
+		} catch (Exception e) {
+		}
+		return writer.toString();
+	}
+	public void parseTemplate(String template, Map model, Writer writer){
+		model.putAll(Config.getPageTools());
+		Context context = new VelocityContext(model);
+		try {
+			velocityEngine.mergeTemplate(template, ""UTF-8"", context, writer);
+		} catch (Exception e) {
+		}
+	}
+	public void parseTemplate(String template, Map model, OutputStream os){
+		model.putAll(Config.getPageTools());
+		Context context = new VelocityContext(model);
+		Writer writer = new OutputStreamWriter(os);
+		try {
+			velocityEngine.mergeTemplate(template, ""UTF-8"", context, writer);
+		} catch (Exception e) {
+		}
+	}
+	public void setVelocityEngine(VelocityEngine velocityEngine) {
+		this.velocityEngine = velocityEngine;
+	}
+	public Config getConfig() {
+		return config;
+	}
+	public void setConfig(Config config) {
+		this.config = config;
+	}
+}"
+63,Java,"package com.itheima.c_inject.c_factory;
+
+import org.junit.Test;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.support.ClassPathXmlApplicationContext;
+
+public class TestFactory {
+	
+	@Test
+	public void demo01(){
+		
+		MyBeanFactory myBeanFactory = new MyBeanFactory();
+		
+		UserService userService = myBeanFactory.createService();
+		
+		userService.addUser();
+	}
+	@Test
+	public void demo02(){
+		
+		String xmlPath = ""com/itheima/c_inject/c_factory/beans.xml"";
+		ApplicationContext applicationContext = new ClassPathXmlApplicationContext(xmlPath);
+		UserService userService = applicationContext.getBean(""userServiceId"" ,UserService.class);
+		userService.addUser();
+	}
+
+}"
+64,Java,"
+package org.apache.directory.api.ldap.model.schema.normalizers;
+
+import java.io.IOException;
+
+import org.apache.directory.api.i18n.I18n;
+import org.apache.directory.api.ldap.model.constants.SchemaConstants;
+import org.apache.directory.api.ldap.model.entry.StringValue;
+import org.apache.directory.api.ldap.model.entry.Value;
+import org.apache.directory.api.ldap.model.exception.LdapException;
+import org.apache.directory.api.ldap.model.exception.LdapInvalidDnException;
+import org.apache.directory.api.ldap.model.schema.Normalizer;
+import org.apache.directory.api.ldap.model.schema.PrepareString;
+
+@SuppressWarnings(""serial"")
+public class NumericNormalizer extends Normalizer
+{
+    
+    public NumericNormalizer()
+    {
+        super( SchemaConstants.NUMERIC_STRING_MATCH_MR_OID );
+    }
+
+    public Value<?> normalize( Value<?> value ) throws LdapException
+    {
+        try
+        {
+            String normalized = PrepareString.normalize( value.getString(),
+                PrepareString.StringType.NUMERIC_STRING );
+
+            return new StringValue( normalized );
+        }
+        catch ( IOException ioe )
+        {
+            throw new LdapInvalidDnException( I18n.err( I18n.ERR_04224, value ), ioe );
+        }
+    }
+
+    public String normalize( String value ) throws LdapException
+    {
+        try
+        {
+            return PrepareString.normalize( value,
+                PrepareString.StringType.NUMERIC_STRING );
+        }
+        catch ( IOException ioe )
+        {
+            throw new LdapInvalidDnException( I18n.err( I18n.ERR_04224, value ), ioe );
+        }
+    }
+}"
+65,Java,"package com.piggsoft.school.web.spring.intercepter;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.web.servlet.HandlerInterceptor;
+import org.springframework.web.servlet.ModelAndView;
+
+public class ExecuteTimeInterceptor implements HandlerInterceptor {
+
+	private static final Logger logger = LoggerFactory
+			.getLogger(ExecuteTimeInterceptor.class);
+	
+	private static final String REQUEST_START_TIME = ExecuteTimeInterceptor.class.getName() + ""."" + ""startTime"";
+
+	@Override
+	public boolean preHandle(HttpServletRequest request,
+			HttpServletResponse response, Object handler) throws Exception {
+		long startTime = System.currentTimeMillis();
+		request.setAttribute(REQUEST_START_TIME, startTime);
+		return true;
+	}
+
+	@Override
+	public void postHandle(HttpServletRequest request,
+			HttpServletResponse response, Object handler,
+			ModelAndView modelAndView) throws Exception {
+
+		long startTime = (Long) request.getAttribute(REQUEST_START_TIME);
+
+		long endTime = System.currentTimeMillis();
+
+		long executeTime = endTime - startTime;
+
+		if (logger.isDebugEnabled()) {
+			logger.debug(""["" + handler + ""] executeTime : "" + executeTime
+					+ ""ms"");
+		}
+	}
+
+	@Override
+	public void afterCompletion(HttpServletRequest request,
+			HttpServletResponse response, Object handler, Exception ex)
+			throws Exception {
+		if (null != ex) {
+			logger.error(ex.getMessage(), ex);
+		}
+	}
+}"
+66,Java,"
+package com.alibaba.dubbo.remoting.transport.netty4.logging;
+
+class FormattingTuple {
+
+    static final FormattingTuple NULL = new FormattingTuple(null);
+
+    private final String message;
+    private final Throwable throwable;
+    private final Object[] argArray;
+
+    FormattingTuple(String message) {
+        this(message, null, null);
+    }
+
+    FormattingTuple(String message, Object[] argArray, Throwable throwable) {
+        this.message = message;
+        this.throwable = throwable;
+        if (throwable == null) {
+            this.argArray = argArray;
+        } else {
+            this.argArray = trimmedCopy(argArray);
+        }
+    }
+
+    static Object[] trimmedCopy(Object[] argArray) {
+        if (argArray == null || argArray.length == 0) {
+            throw new IllegalStateException(""non-sensical empty or null argument array"");
+        }
+        final int trimemdLen = argArray.length - 1;
+        Object[] trimmed = new Object[trimemdLen];
+        System.arraycopy(argArray, 0, trimmed, 0, trimemdLen);
+        return trimmed;
+    }
+
+    public String getMessage() {
+        return message;
+    }
+
+    public Object[] getArgArray() {
+        return argArray;
+    }
+
+    public Throwable getThrowable() {
+        return throwable;
+    }
+}"
+67,Java,"package i5.las2peer.services.ocd.centrality.utils;
+
+import java.util.Map;
+
+import i5.las2peer.services.ocd.centrality.data.CentralityMeasureType;
+import i5.las2peer.services.ocd.utils.ConditionalParameterizableFactory;
+
+public class CentralityAlgorithmFactory implements ConditionalParameterizableFactory<CentralityAlgorithm, CentralityMeasureType> {
+
+	public boolean isInstantiatable(CentralityMeasureType creationType) {
+		if(creationType.correspondsAlgorithm()) {
+			return true;
+		}
+		else {
+			return false;
+		}
+	}
+
+	@Override
+	public CentralityAlgorithm getInstance(CentralityMeasureType centralityMeasureType, Map<String, String> parameters) throws InstantiationException, IllegalAccessException {
+		if(isInstantiatable(centralityMeasureType)) {
+			CentralityAlgorithm algorithm = (CentralityAlgorithm) centralityMeasureType.getCreationMethodClass().newInstance();
+			algorithm.setParameters(parameters);
+			return algorithm;
+		}
+		throw new IllegalStateException(""This creation type is not an instantiatable algorithm."");
+	}
+
+}"
+68,Java,"
+package org.apache.activemq.openwire.v6;
+
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
+
+import org.apache.activemq.openwire.*;
+import org.apache.activemq.command.*;
+
+public class ProducerInfoTest extends BaseCommandTestSupport {
+
+   public static ProducerInfoTest SINGLETON = new ProducerInfoTest();
+
+   public Object createObject() throws Exception {
+      ProducerInfo info = new ProducerInfo();
+      populateObject(info);
+      return info;
+   }
+
+   protected void populateObject(Object object) throws Exception {
+      super.populateObject(object);
+      ProducerInfo info = (ProducerInfo) object;
+
+      info.setProducerId(createProducerId(""ProducerId:1""));
+      info.setDestination(createActiveMQDestination(""Destination:2""));
+      {
+         BrokerId value[] = new BrokerId[2];
+         for (int i = 0; i < 2; i++) {
+            value[i] = createBrokerId(""BrokerPath:3"");
+         }
+         info.setBrokerPath(value);
+      }
+      info.setDispatchAsync(true);
+      info.setWindowSize(1);
+   }
+}"
+69,Java,"package com.github.dreamhead.moco.handler;
+
+import com.github.dreamhead.moco.MocoConfig;
+import com.github.dreamhead.moco.ResponseHandler;
+import com.github.dreamhead.moco.internal.SessionContext;
+import com.google.common.collect.ImmutableList;
+
+import java.util.stream.Collectors;
+
+import static com.google.common.collect.ImmutableList.copyOf;
+
+public abstract class CollectionHandler extends AbstractResponseHandler {
+    private final ImmutableList<ResponseHandler> handlers;
+    private int index;
+
+    protected CollectionHandler(final Iterable<ResponseHandler> handlers) {
+        this.handlers = copyOf(handlers);
+    }
+
+    @Override
+    public final void writeToResponse(final SessionContext context) {
+        int current = index;
+        this.index = next(index, this.handlers.size());
+        handlers.get(current).writeToResponse(context);
+    }
+
+    @Override
+    public final ResponseHandler doApply(final MocoConfig config) {
+        return newCollectionHandler(handlers.stream()
+                .map(input -> input.apply(config))
+                .collect(Collectors.toList()));
+    }
+
+    protected abstract int next(int index, int size);
+
+    protected abstract ResponseHandler newCollectionHandler(Iterable<ResponseHandler> handlers);
+}"
+70,Java,"package com.zimolo.inventory.domain.util;
+
+import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.databind.JsonSerializer;
+import com.fasterxml.jackson.databind.SerializerProvider;
+import org.joda.time.DateTime;
+import org.joda.time.DateTimeZone;
+import org.joda.time.format.DateTimeFormat;
+import org.joda.time.format.DateTimeFormatter;
+
+import java.io.IOException;
+
+public class CustomDateTimeSerializer extends JsonSerializer<DateTime> {
+
+    private static DateTimeFormatter formatter = DateTimeFormat
+            .forPattern(""yyyy-MM-dd'T'HH:mm:ss'Z'"");
+
+    @Override
+    public void serialize(DateTime value, JsonGenerator generator,
+                          SerializerProvider serializerProvider)
+            throws IOException {
+        generator.writeString(formatter.print(value.toDateTime(DateTimeZone.UTC)));
+    }
+
+}"
+71,Java,"
+package com.amazonaws.transform;
+
+import java.lang.reflect.Constructor;
+
+import com.amazonaws.AmazonServiceException;
+
+public abstract class AbstractErrorUnmarshaller<T> implements Unmarshaller<AmazonServiceException, T> {
+
+    protected final Class<? extends AmazonServiceException> exceptionClass;
+
+    public AbstractErrorUnmarshaller() {
+        this(AmazonServiceException.class);
+    }
+
+    public AbstractErrorUnmarshaller(Class<? extends AmazonServiceException> exceptionClass) {
+        this.exceptionClass = exceptionClass;
+    }
+
+    protected AmazonServiceException newException(String message) throws Exception {
+        Constructor<? extends AmazonServiceException> constructor = exceptionClass.getConstructor(String.class);
+        return constructor.newInstance(message);
+    }
+
+}"
+72,Java,"
+package net.imagej.ops.create.img;
+
+import net.imagej.ops.Ops;
+import net.imagej.ops.special.chain.UFViaUFSameIO;
+import net.imagej.ops.special.function.Functions;
+import net.imagej.ops.special.function.UnaryFunctionOp;
+import net.imglib2.Interval;
+import net.imglib2.img.Img;
+import net.imglib2.type.numeric.real.DoubleType;
+
+import org.scijava.plugin.Plugin;
+
+@Plugin(type = Ops.Create.Img.class)
+public class CreateImgFromInterval extends
+	UFViaUFSameIO<Interval, Img<DoubleType>> implements Ops.Create.Img
+{
+
+	@Override
+	@SuppressWarnings({""rawtypes"", ""unchecked""})
+	public UnaryFunctionOp<Interval, Img<DoubleType>> createWorker(
+		final Interval input)
+	{
+		
+		return (UnaryFunctionOp) Functions.unary(ops(), Ops.Create.Img.class,
+			Img.class, input, new DoubleType());
+	}
+
+}"
+73,Java,"package com.hearthsim.card.basic.spell;
+
+import com.hearthsim.card.spellcard.SpellTargetableCard;
+import com.hearthsim.event.effect.EffectCharacter;
+import com.hearthsim.event.effect.EffectCharacterBuffTemp;
+import com.hearthsim.event.filter.FilterCharacter;
+import com.hearthsim.event.filter.FilterCharacterTargetedSpell;
+
+public class HeroicStrike extends SpellTargetableCard {
+
+    private final static EffectCharacter effect = new EffectCharacterBuffTemp(4);
+
+    public HeroicStrike() {
+        super();
+    }
+
+    @Override
+    public FilterCharacter getTargetableFilter() {
+        return FilterCharacterTargetedSpell.SELF;
+    }
+
+    @Override
+    public EffectCharacter getTargetableEffect() {
+        return HeroicStrike.effect;
+    }
+}"
+74,Java,"package de.choesel.blechwiki.model;
+
+import com.j256.ormlite.field.DatabaseField;
+import com.j256.ormlite.table.DatabaseTable;
+
+import java.util.UUID;
+
+@DatabaseTable(tableName = ""komponist"")
+public class Komponist {
+
+    @DatabaseField(generatedId = true)
+    private UUID id;
+
+    @DatabaseField(canBeNull = true, uniqueCombo = true)
+    private String name;
+
+    @DatabaseField(canBeNull = true)
+    private String kurzname;
+
+    @DatabaseField(canBeNull = true, uniqueCombo = true)
+    private Integer geboren;
+
+    @DatabaseField(canBeNull = true)
+    private Integer gestorben;
+
+    public UUID getId() {
+        return id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public String getKurzname() {
+        return kurzname;
+    }
+
+    public Integer getGeboren() {
+        return geboren;
+    }
+
+    public Integer getGestorben() {
+        return gestorben;
+    }
+
+    public void setId(UUID id) {
+        this.id = id;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public void setKurzname(String kurzname) {
+        this.kurzname = kurzname;
+    }
+
+    public void setGeboren(Integer geboren) {
+        this.geboren = geboren;
+    }
+
+    public void setGestorben(Integer gestorben) {
+        this.gestorben = gestorben;
+    }
+}"
+75,JavaScript,"var keypress = require(""keypress"");
+
+var Spark = require(""../"");
+var five = require(""johnny-five"");
+var Sumobot = require(""sumobot"")(five);
+
+keypress(process.stdin);
+
+var board = new five.Board({
+  io: new Spark({
+    token: process.env.SPARK_TOKEN,
+    deviceId: process.env.SPARK_DEVICE_2
+  })
+});
+
+board.on(""ready"", function() {
+
+  console.log(""Welcome to Sumobot Jr: Light Bot!"");
+
+  var bot = new Sumobot({
+    left: ""D0"",
+    right: ""D1"",
+    speed: 0.50
+  });
+
+  var light = new five.Sensor(""A0"");
+  var isQuitting = false;
+
+  light.on(""change"", function() {
+    if (isQuitting || this.value === null) {
+      return;
+    }
+
+    if (this.value < 512) {
+      bot.fwd();
+    } else {
+      bot.rev();
+    }
+  });
+
+  bot.stop();
+});"
+76,JavaScript,"+(function () {
+
+    'use strict';
+
+    angular
+        .module('DashboardApplication')
+        .controller('FileManagerRemoveFolderController', ['$scope', '$q', 'Event', 'FoldersRest', FileManagerRemoveFolderController]);
+
+    function FileManagerRemoveFolderController($scope, $q, Event, FoldersRest) {
+        var vm = this;
+        var folderId = $scope.ngDialogData.folderId;
+
+        vm.removeFolder = removeFolder;
+
+        function removeFolder() {
+            var id = folderId;
+            var $defer = $q.defer();
+            FoldersRest.one(id).remove().then(function () {
+                console.log(""FoldersRest"");
+                debugger;
+                Event.publish('FOLDERS_TREEVIEW_UPDATED');
+                alert('فولدر با موفقیت حذف شد', 'انجام شد!');
+                $defer.resolve();
+            }, function (error) {
+                $defer.reject(error);
+            });
+            return $defer.promise;
+        }
+    }
+
+})();"
+77,JavaScript,"const webpack = require('atool-build/lib/webpack');
+
+module.exports = function (webpackConfig, env) {
+  webpackConfig.babel.plugins.push('transform-runtime');
+  webpackConfig.babel.plugins.push(['import', {
+    libraryName: 'antd',
+    style: 'css'  
+  }]);
+  
+  if (env === 'development') {
+    webpackConfig.devtool = '#eval';
+    webpackConfig.babel.plugins.push('dva-hmr');
+  } else {
+    webpackConfig.babel.plugins.push('dev-expression');
+  }
+
+  webpackConfig.plugins = webpackConfig.plugins.filter(function (plugin) {
+    return !(plugin instanceof webpack.optimize.CommonsChunkPlugin);
+  });
+
+  webpackConfig.module.loaders.forEach(function (loader, index) {
+    if (typeof loader.test === 'function' && loader.test.toString().indexOf('\\.less$') > -1) {
+      loader.include = /node_modules/;
+      loader.test = /\.less$/;
+    }
+    if (loader.test.toString() === '/\\.module\\.less$/') {
+      loader.exclude = /node_modules/;
+      loader.test = /\.less$/;
+    }
+    if (typeof loader.test === 'function' && loader.test.toString().indexOf('\\.css$') > -1) {
+      loader.include = /node_modules/;
+      loader.test = /\.css$/;
+    }
+    if (loader.test.toString() === '/\\.module\\.css$/') {
+      loader.exclude = /node_modules/;
+      loader.test = /\.css$/;
+    }
+  });
+
+  return webpackConfig;
+};"
+78,JavaScript,"var expect = require('chai').expect;
+var runner = require('../runner');
+
+describe('nasm runner', function() {
+  describe('.run', function() {
+    it('should handle basic code evaluation (no libc)', function(done) {
+      runner.run({
+        language: 'nasm',
+        code: [
+          '   global  _start',
+          '   section .text',
+          '_start:',
+          '   mov     rax, 1',
+          '   mov     rdi, 1',
+          '   mov     rsi, message',
+          '   mov     rdx, 25',
+          '   syscall',
+          '   mov     eax, 60',
+          '   xor     rdi, rdi',
+          '   syscall',
+          'message:',
+          'db      ""Hello, Netwide Assembler!"", 25'
+        ].join('\n')
+      }, function(buffer) {
+        expect(buffer.stdout).to.equal('Hello, Netwide Assembler!');
+        done();
+      });
+    });
+    it('should handle basic code evaluation (with libc)', function(done) {
+      runner.run({
+        language: 'nasm',
+        code: [
+          '   global  main',
+          '   extern  puts',
+          '   section .text',
+          'main:',
+          '   mov     rdi, message',
+          '   call    puts',
+          '   ret',
+          'message:',
+          'db      ""Netwide Assembler together with LIBC!  Let\'s Port Codewars From Rails to THIS! \\m/"", 0'
+        ].join('\n')
+      }, function(buffer) {
+        expect(buffer.stdout).to.equal('Netwide Assembler together with LIBC!  Let\'s Port Codewars From Rails to THIS! \\m/\n');
+        done();
+      });
+    });
+  });
+});"
+79,JavaScript,"process.env.NODE_ENV = 'test';
+
+var chai = require('chai');
+var chaihttp = require('chai-http');
+chai.use(chaihttp);
+var expect = chai.expect;
+
+require(__dirname + '/../app.js');
+
+describe('the error handler function', function() {
+
+  it('should return a status of 500', function(done) {
+    chai.request('localhost:3000')
+      .get('/products/fish')
+      .end(function(err, res) {
+        expect(res).to.have.status(500);
+        expect(JSON.stringify(res.body)).to.eql('{""msg"":""ERROR!!""}');
+        done();
+      });
+  });
+});"
+80,JavaScript,"Ext.form.BasicForm.override({
+    resetDirty: function() {
+        this.items.each(function(field) {
+            field.resetDirty();
+        });
+    },
+    setDefaultValues: function() {
+        this.items.each(function(field) {
+            field.setDefaultValue();
+        }, this);
+    },
+    clearValues: function() {
+        this.items.each(function(field) {
+            if (field.rendered) field.clearValue();
+        }, this);
+    },
+
+    getValues: function() {
+        var ret = {};
+        this.items.each(function(field) {
+            if (field.getName && field.getName()) {
+                ret[field.getName()] = field.getValue();
+            }
+        }, this);
+        return ret;
+    }
+});
+
+Ext.apply(Ext.form.VTypes, {
+    
+    email:  function(v) {
+        return /^([a-zA-Z0-9_.+-])+@(([a-zA-Z0-9-])+.)+([a-zA-Z0-9]{2,4})+$/.test(v);
+    },
+    emailMask : /[a-z0-9_\.\-@+]/i, 
+
+    urltel: function(v) {
+        return /^(tel:\/\/[\d\s]+|(((https?)|(ftp)):\/\/([\-\w]+\.)+\w{2,3}(\/[%\-\w]+(\.\w{2,})?)*(([\w\-\.\?\\\/+@&#;`~=%!]*)(\.\w{2,})?)*\/?))+$/.test(v);
+    },
+    urltelTest: trlKwf('This field should be a URL in the format ""http:
+
+    alphanum:  function(v) {
+        return /^[a-zA-Z0-9_\-]+$/.test(v);
+    },
+    alphanumText : trlKwf('This field should only contain letters, numbers, - and _'),
+    alphanumMask : /[a-z0-9_\-]/i,
+
+    num:  function(v) {
+        return /^[0-9]+$/.test(v);
+    },
+    numText : trlKwf('This field should only contain numbers'),
+    numMask : /[0-9]/,
+
+    time: function(val, field) {
+        return /^([0-9]{2}):([0-9]{2}):([0-9]{2})$/i.test(val);
+    },
+    timeText: trlKwf('Not a valid time.  Must be in the format ""12:34:00"".'),
+    timeMask: /[\d:]/i
+});"
+81,JavaScript,"document.addEventListener(""DOMContentLoaded"", function (event) {
+	'use strict';
+	var paragraph, url, proxy;
+	paragraph = document.querySelectorAll('p.error_text');
+	chrome.tabs.query({ currentWindow: true, active: true }, function (tabs) {
+		url = tabs[0].url;
+		if (url.indexOf('chrome:
+			paragraph[0].innerHTML = 'Sorry, you can\'t activate Browse Google Cache on a page with a ""chrome:
+		} else if (url.indexOf('https:
+			paragraph[0].innerHTML = 'Sorry, you can\'t activate Browse Google Cache on the Chrome Web Store.';
+		} else {
+			chrome.tabs.query({ currentWindow: true, active: true }, function (tabs) {
+				chrome.runtime.sendMessage({
+					action : 'extensionButtonClicked',
+					'tab': tabs[0]
+				});
+				window.close();
+			});
+		}
+	});
+});"
+82,JavaScript,"'use strict';
+
+var phonecatApp = angular.module('phonecatApp', [
+  'ngRoute',
+
+  'phonecatAnimations',
+  'phonecatControllers',
+  'phonecatFilters',
+  'phonecatServices',
+]);
+    
+phonecatApp.config(['$routeProvider',
+  function($routeProvider) {
+    $routeProvider.
+      when('/phones', {
+        templateUrl: 'partials/phone-list.html',
+        controller: 'PhoneListCtrl'
+      }).
+      when('/phones/:phoneId', {
+        templateUrl: 'partials/phone-detail.html',
+        controller: 'PhoneDetailCtrl'
+      }).
+      otherwise({
+        redirectTo: '/phones'
+      });
+  }]);"
+83,JavaScript,"import { Component } from 'vidom';
+import { DocComponent, DocTabs, DocTab, DocAttrs, DocAttr, DocExample, DocChildren, DocText, DocInlineCode } from '../../Doc';
+import SimpleExample from './examples/SimpleExample';
+import simpleExampleCode from '!raw!./examples/SimpleExample.js';
+
+export default function ModalDoc({ tab, onTabChange }) {
+    return (
+        <DocComponent title=""Modal"">
+            <DocTabs value={ tab } onTabChange={ onTabChange }>
+                <DocTab title=""Examples"" value=""Examples"">
+                    <DocExample title=""Simple"" code={ simpleExampleCode }>
+                        <SimpleExample/>
+                    </DocExample>
+                </DocTab>
+                <DocTab title=""API"" value=""api"">
+                    <DocAttrs>
+                        <DocAttr name=""autoclosable"" type=""Boolean"" def=""false"">
+                            Enables the modal to be hidden on pressing ""Esc"" or clicking somewhere outside its content.
+                        </DocAttr>
+                        <DocAttr name=""onHide"" type=""Function"">
+                            The callback to handle hide event.
+                        </DocAttr>
+                        <DocAttr name=""theme"" type=""String"" required>
+                            Sets the modal theme.
+                        </DocAttr>
+                        <DocAttr name=""visible"" type=""Boolean"" def=""false"">
+                            Sets the visibility of the modal.
+                        </DocAttr>
+                    </DocAttrs>
+                    <DocChildren>
+                        <DocText>
+                            Children with any valid type are allowed.
+                        </DocText>
+                    </DocChildren>
+                </DocTab>
+            </DocTabs>
+        </DocComponent>
+    );
+}"
+84,JavaScript,"
+const checkValidString = function (s) {
+    let leftCount = 0, rightCount = 0, starCount = 0;
+    let idx = 0;
+    while (idx < s.length) {
+        let ch = s[idx++];
+        if (ch === '(') {
+            ++leftCount;
+        } else if (ch === '*') {
+            ++starCount;
+        } else {    
+            ++rightCount;
+            if (rightCount > leftCount + starCount) {
+                return false;
+            }
+        }
+    }
+    idx = s.length - 1;
+    leftCount = rightCount = starCount = 0;
+    while (idx >= 0) {
+        let ch = s[idx--];
+        if (ch === ')') {
+            ++rightCount;
+        } else if (ch === '*') {
+            ++starCount;
+        } else {    
+            ++leftCount;
+            if (leftCount > rightCount + starCount) {
+                return false;
+            }
+        }
+    }
+    return true;
+};
+
+module.exports = checkValidString;"
+85,JavaScript,"import Component from '@glimmer/component';
+import VerifiLogoSvg from 'dummy/images/media-registry/verifi-logo.svg';
+
+export default class RegistrationEmbedded extends Component {
+  get registrationEmbedded() {
+    let verifi_id = this.args.model?.verifi_id;
+
+    if (verifi_id) {
+      return {
+        id: verifi_id,
+        type: 'registration',
+        imgURL: VerifiLogoSvg,
+        title: 'Verifi Registry',
+        description: verifi_id,
+        fields: [
+          {
+            title: 'asset type',
+            value: this.args.model.asset_type || 'Master Recording',
+          },
+          {
+            title: 'created',
+            value: this.args.model.verifi_reg_date,
+            type: 'date',
+          },
+        ],
+      };
+    }
+
+    return null;
+  }
+}"
+86,JavaScript,"ace.define(""ace/snippets/apache_conf"",[""require"",""exports"",""module""], function(require, exports, module) {
+""use strict"";
+
+exports.snippetText = """";
+exports.scope = ""apache_conf"";
+
+});
+                (function() {
+                    ace.require([""ace/snippets/apache_conf""], function(m) {
+                        if (typeof module == ""object"" && typeof exports == ""object"" && module) {
+                            module.exports = m;
+                        }
+                    });
+                })();
+            "
+87,JavaScript,"$(document).ready(function()	{
+
+	SVGUpInstance.init('inforamaui',
+		
+		{""icons"": {
+			""logo"":{""url"":""images/inforama-icon.svg""},
+			""downarrow"":{""url"":""images/down-arrow.svg""},
+			""usericon"":{""url"":""images/user-icon.svg""}
+		},
+
+		""classes"":{
+			""mainstyle"":{
+				""svgdefault"":{""fillcolor"":""#AA8833""},
+				""svghover"":{""fillcolor"":""#8CC63E""},
+				""cssdefault"":{""opacity"":""0.3"", ""width"":""40px"", ""height"":""40px"", ""transition"":""all 0.5s""},
+				""csshover"":{""opacity"":""1"", ""width"":""50px"", ""height"":""50px""}
+			}
+		}}
+
+	);	
+
+});"
+88,JavaScript,"
+var flatpickr = flatpickr || { l10ns: {} };
+flatpickr.l10ns.sl = {};
+
+flatpickr.l10ns.sl.weekdays = {
+	shorthand: [""Ned"", ""Pon"", ""Tor"", ""Sre"", ""Čet"", ""Pet"", ""Sob""],
+	longhand: [""Nedelja"", ""Ponedeljek"", ""Torek"", ""Sreda"", ""Četrtek"", ""Petek"", ""Sobota""]
+};
+
+flatpickr.l10ns.sl.months = {
+	shorthand: [""Jan"", ""Feb"", ""Mar"", ""Apr"", ""Maj"", ""Jun"", ""Jul"", ""Avg"", ""Sep"", ""Okt"", ""Nov"", ""Dec""],
+	longhand: [""Januar"", ""Februar"", ""Marec"", ""April"", ""Maj"", ""Junij"", ""Julij"", ""Avgust"", ""September"", ""Oktober"", ""November"", ""December""]
+};
+
+flatpickr.l10ns.sl.firstDayOfWeek = 1;
+flatpickr.l10ns.sl.rangeSeparator = "" do "";
+flatpickr.l10ns.sl.ordinal = function () {
+	return ""."";
+};
+
+if (typeof module !== ""undefined"") module.exports = flatpickr.l10ns;"
+89,JavaScript,"module.exports = function verify(check) {
+    if (typeof check !== 'object') {
+        throw new Error('check is not an object');
+    }
+
+    var errors = [];
+
+    Object.keys(check).forEach(_verify, check);
+
+    if (errors.length > 0) {
+        throw new Error('Health checks failed: '+ errors.join(', '));
+    }
+
+    return true;
+
+    function _verify(key, i) {
+        if (this[key] === false || this[key] instanceof Error) {
+            errors.push(key);
+        }
+        else if (this[key] && typeof this[key] === 'object' && !Array.isArray(this[key])) {
+            Object.keys(this[key]).forEach(_verify, this[key]);
+        }
+    }
+};
+"
+90,JavaScript,"angular.module('gitphaser').controller('ProfileController', ProfileCtrl);
+
+function ProfileCtrl ($scope, $stateParams, $state, $cordovaInAppBrowser, GitHub, account) {
+  var self = this;
+  self.browser = $cordovaInAppBrowser;
+
+  self.modalOpen = false;
+
+  if (account) {
+    self.user = account.info;
+    self.repos = account.repos;
+    self.events = account.events;
+    self.viewTitle = account.info.login;
+    self.state = $state;
+    self.nav = true;
+    self.canFollow = GitHub.canFollow(account.info.login);
+
+  } else {
+    self.user = GitHub.me;
+    self.repos = GitHub.repos;
+    self.events = GitHub.events;
+    self.viewTitle = GitHub.me.login;
+    self.canFollow = false;
+    self.nav = false;
+  }
+
+  self.company = self.user.company;
+  self.email = self.user.email;
+  self.blog = self.user.blog;
+  self.location = self.user.location;
+
+  if (self.company && self.email) {
+    self.blog = false;
+    self.location = false;
+
+  } else if ((!self.company && self.email) || (self.company && !self.email)) {
+    (self.blog) ? self.location = false : true;
+  }
+
+  self.back = function () {
+    if ($stateParams.origin === 'nearby') $state.go('tab.nearby');
+    if ($stateParams.origin === 'notifications') $state.go('tab.notifications');
+  };
+
+  self.follow = function () {
+    self.canFollow = false;
+    GitHub.follow(self.user);
+  };
+}"
+91,JavaScript,"'use strict';
+
+Object.defineProperty(exports, ""__esModule"", {
+    value: true
+});
+
+var _ErrorHandler = require('../utils/ErrorHandler');
+
+var startActivity = function startActivity(appPackage, appActivity) {
+    if (typeof appPackage !== 'string' || typeof appActivity !== 'string') {
+        throw new _ErrorHandler.ProtocolError('startActivity command requires two parameter (appPackage, appActivity) from type string');
+    }
+
+    return this.requestHandler.create('/session/:sessionId/appium/device/start_activity', { appPackage: appPackage, appActivity: appActivity });
+}; 
+
+exports.default = startActivity;
+module.exports = exports['default'];"
+92,JavaScript,"
+import './ek-instances.less';
+import Directive from 'directive';
+import Controller from './ek-instances.controller';
+import constants from '../constants';
+import template from './ek-instances.html';
+
+class InstancesDirective extends Directive {
+    constructor() {
+        super({ Controller, template });
+    }
+
+    compile(tElement) {
+        tElement
+            .addClass('ek-instances layout-column');
+
+        return ($scope) => _.extend($scope, constants);
+    }
+}
+
+export default InstancesDirective;"
+93,JavaScript,"let mongoose = require('mongoose')
+
+let userSchema = mongoose.Schema({
+    
+    local: {
+        email: {
+            type: String,
+            required: true
+        },
+        password: {
+            type: String,
+            required: true
+        }
+    },
+
+    facebook: {
+        id: String,
+        token: String,
+        email: String,
+        name: String
+    }
+})
+
+userSchema.methods.generateHash = async function(password) {
+    return await bcrypt.promise.hash(password, 8)
+}
+
+userSchema.methods.validatePassword = async function(password) {
+    return await bcrypt.promise.compare(password, this.password)
+}
+
+userSchema.methods.linkAccount = function(type, values) {
+    
+    return this['link' + _.capitalize(type) + 'Account'](values)
+}
+
+userSchema.methods.linkLocalAccount = function({
+    email, password
+}) {
+    throw new Error('Not Implemented.')
+}
+
+userSchema.methods.linkFacebookAccount = function({
+    account, token
+}) {
+    throw new Error('Not Implemented.')
+}
+
+userSchema.methods.linkTwitterAccount = function({
+    account, token
+}) {
+    throw new Error('Not Implemented.')
+}
+
+userSchema.methods.linkGoogleAccount = function({
+    account, token
+}) {
+    throw new Error('Not Implemented.')
+}
+
+userSchema.methods.linkLinkedinAccount = function({
+    account, token
+}) {
+    throw new Error('Not Implemented.')
+}
+
+userSchema.methods.unlinkAccount = function(type) {
+    throw new Error('Not Implemented.')
+}
+
+module.exports = mongoose.model('User', userSchema)"
+94,JavaScript,"var packageInfo = require('./package.json');
+var taskList = [{name:'default'},{name:'delete'},{name:'build'},{name:'copy'},{name:'minify'}];
+
+var gulpTalk2me = require('gulp-talk2me');
+var talk2me = new gulpTalk2me(packageInfo,taskList);
+var del = require('del');
+var gulp = require('gulp');
+var runSequence = require('run-sequence');
+var sourcemaps = require('gulp-sourcemaps');
+var rename = require('gulp-rename');
+var ngAnnotate = require('gulp-ng-annotate');
+var bytediff = require('gulp-bytediff');
+var uglify = require('gulp-uglify');
+var concat = require('gulp-concat');
+var templateCache = require('gulp-angular-templatecache');
+var series = require('stream-series');
+var angularFilesort = require('gulp-angular-filesort');
+
+console.log(talk2me.greeting);
+
+gulp.task('default',function(callback){
+   runSequence('build',callback);
+});
+
+gulp.task('delete',function(callback){
+   del('dist*', callback());
+});
+
+gulp.task('build',function(callback){
+  runSequence('delete',['copy','minify'],callback);
+});
+
+gulp.task('copy',function(){
+  return series(genTemplateStream(),gulp.src(['src*.js','!src*.spec.js']))
+  .pipe(sourcemaps.init())
+  .pipe(angularFilesort())
+  .pipe(concat('bs-fa-boolean-directive.js', {newLine: ';\n'}))
+  .pipe(ngAnnotate({
+      add: true
+    }))
+  .pipe(sourcemaps.write('./'))
+  .pipe(gulp.dest('dist'));
+});
+
+gulp.task('minify',function(){ 
+  return series(genTemplateStream(),gulp.src(['src*.js','!src*.spec.js']))
+    .pipe(sourcemaps.init())
+    .pipe(angularFilesort())
+    .pipe(concat('bs-fa-boolean-directive.js', {newLine: ';'}))
+    .pipe(rename(function (path) {
+      path.basename += "".min"";
+    }))
+    .pipe(ngAnnotate({
+      add: true
+    }))
+    .pipe(bytediff.start())
+    .pipe(uglify({mangle: true}))
+    .pipe(bytediff.stop())
+    .pipe(sourcemaps.write('./'))
+    .pipe(gulp.dest('dist'));
+});
+
+function genTemplateStream () {
+  return gulp.src(['src*.view.html'])
+  .pipe(templateCache({standalone:true,module:'bs-fa-boolean.template'}));
+}"
+95,JavaScript,"
+var originalReconnect = Meteor.connection.onReconnect;
+Meteor.connection.onReconnect = function() {
+  setToken();
+  if(originalReconnect) {
+    originalReconnect();
+  }
+};
+
+if(Meteor.status().connected) {
+  setToken();
+}
+
+function setToken() {
+  var firewallHumanToken = Cookie.get('sikka-human-token');
+  Meteor.call('setSikkaHumanToken', firewallHumanToken);
+}
+
+window.sikkaCommands = sikkaCommands = new Mongo.Collection('sikka-commands');
+sikkaCommands.find({}).observe({
+  added: function(command) {
+    if(command._id === ""reload"") {
+      location.reload();
+    }
+  }
+});"
+96,JavaScript,"
+function paddAppendClear() {
+	jQuery('.append-clear').append('<div class=""clear""></div>');
+}
+
+function paddWrapInner1() {
+	jQuery('.wrap-inner-1').wrapInner('<div class=""inner""></div>');
+}
+
+function paddWrapInner3() {
+	jQuery('.wrap-inner-3').wrapInner('<div class=""m""></div>');
+	jQuery('.wrap-inner-3').prepend('<div class=""t""></div>');
+	jQuery('.wrap-inner-3').append('<div class=""b""></div>');
+}
+
+function paddToggle(classname,value) {
+	jQuery(classname).focus(function() {
+		if (value == jQuery(classname).val()) {
+			jQuery(this).val('');
+		}
+	});
+	jQuery(classname).blur(function() {
+		if ('' == jQuery(classname).val()) {
+			jQuery(this).val(value);
+		}
+	});
+}
+
+jQuery(document).ready(function() {
+	jQuery.noConflict();
+	
+	jQuery('div#menubar div > ul').superfish({
+		hoverClass: 'hover',
+		speed: 500,
+		animation: { opacity: 'show', height: 'show' }
+	});
+	
+	paddAppendClear();
+	paddWrapInner1();
+	paddWrapInner3();
+	
+	jQuery('p.older-articles').titleBoxShadow('#ebebeb');
+	jQuery('.hentry-large .title').titleBoxShadow('#ebebeb');
+	jQuery('.hentry-large .thumbnail img').imageBoxShadow('#ebebeb');
+	
+	jQuery('input#s').val('Search this site');
+	paddToggle('input#s','Search this site');
+
+	jQuery('div.search form').click(function () {
+		jQuery('input#s').focus();
+	});
+});"
+97,JavaScript,"$(document).ready(function(){hopscotch.startTour({id:""my-intro"",steps:[{target:""logo-tour"",title:""Logo Here"",content:""You can find here status of user who's currently online."",placement:""bottom"",yOffset:10},{target:""display-title-tour"",title:""Display Text"",content:""Click on the button and make sidebar navigation small."",placement:""top"",zindex:999},{target:""page-title-tour"",title:""User settings"",content:""You can edit you profile info here."",placement:""bottom"",zindex:999},{target:""thankyou-tour"",title:""Thank you !"",content:""Here you can change theme skins and other features."",placement:""top"",zindex:999}],showPrevButton:!0})});"
+98,JavaScript,"var gulp = require(""gulp"");
+var util = require(""gulp-util"");
+
+var config = require(""../config"")
+
+gulp.task(""watch"", () => {
+
+	gulp.watch(`${config.src.ts}`, [""compile:ts""]).on(""change"", reportChange).on(""error"", swallowError);
+	
+	gulp.watch(`${config.test.files}`, [""compile:test""]).on(""change"", reportChange).on(""error"", swallowError);
+
+});
+
+function reportChange(event) {
+	console.log(`File ${event.path} was ${event.type}, running tasks...`);
+}
+
+function swallowError(error) {
+	console.log(util.colors.red(`Error occurred while running watched task...`));
+}"
+99,JavaScript,"
+(function( window, undefined ) {
+
+var Globalize;
+
+if ( typeof require !== ""undefined"" &&
+	typeof exports !== ""undefined"" &&
+	typeof module !== ""undefined"" ) {
+	
+	Globalize = require( ""globalize"" );
+} else {
+	
+	Globalize = window.Globalize;
+}
+
+Globalize.addCultureInfo( ""co"", ""default"", {
+	name: ""co"",
+	englishName: ""Corsican"",
+	nativeName: ""Corsu"",
+	language: ""co"",
+	numberFormat: {
+		"","": "" "",
+		""."": "","",
+		""NaN"": ""Mica numericu"",
+		negativeInfinity: ""-Infinitu"",
+		positiveInfinity: ""+Infinitu"",
+		percent: {
+			"","": "" "",
+			""."": "",""
+		},
+		currency: {
+			pattern: [""-n $"",""n $""],
+			"","": "" "",
+			""."": "","",
+			symbol: ""€""
+		}
+	},
+	calendars: {
+		standard: {
+			firstDay: 1,
+			days: {
+				names: [""dumenica"",""luni"",""marti"",""mercuri"",""ghjovi"",""venderi"",""sabbatu""],
+				namesAbbr: [""dum."",""lun."",""mar."",""mer."",""ghj."",""ven."",""sab.""],
+				namesShort: [""du"",""lu"",""ma"",""me"",""gh"",""ve"",""sa""]
+			},
+			months: {
+				names: [""ghjennaghju"",""ferraghju"",""marzu"",""aprile"",""maghju"",""ghjunghju"",""lugliu"",""aostu"",""settembre"",""ottobre"",""nuvembre"",""dicembre"",""""],
+				namesAbbr: [""ghje"",""ferr"",""marz"",""apri"",""magh"",""ghju"",""lugl"",""aost"",""sett"",""otto"",""nuve"",""dice"",""""]
+			},
+			AM: null,
+			PM: null,
+			eras: [{""name"":""dopu J-C"",""start"":null,""offset"":0}],
+			patterns: {
+				d: ""dd/MM/yyyy"",
+				D: ""dddd d MMMM yyyy"",
+				t: ""HH:mm"",
+				T: ""HH:mm:ss"",
+				f: ""dddd d MMMM yyyy HH:mm"",
+				F: ""dddd d MMMM yyyy HH:mm:ss"",
+				M: ""d MMMM"",
+				Y: ""MMMM yyyy""
+			}
+		}
+	}
+});
+
+}( this ));"
+100,C++,"#include <bits/stdc++.h>
+using namespace std;
+
+long long unsigned v[63], a, b;
+
+long long unsigned S(long long unsigned n){
+	if(!n) return 0;
+	if((1LL<<((sizeof(long long)<<3) - __builtin_clzll(n)))-1 == n)
+		return v[(sizeof(long long)<<3) - __builtin_clzll(n)];
+	return v[(sizeof(long long)<<3) - __builtin_clzll(n)-1] + S(n^(1LL<<((sizeof(long long))<<3) - __builtin_clzll(n)-1)) + n - ((1LL << ((sizeof(long long)<<3) - __builtin_clzll(n)-1))-1);
+}
+
+int main(){
+	v[0] = 0;
+	for(int i=1; i<63; i++)
+		v[i] = (v[i-1]<<1) + (1LL<<(i-1));
+	while(scanf(""%llu %llu"", &a, &b) != EOF)
+		printf(""%llu\n"", S(b)-S(a-1));
+
+	return 0;
+}"
+101,C++,"
+#include ""NearestBase.h""
+#include ""DialogUtilities.h""
+
+DLLExport BOOL WINAPI PickerProc(HWND hDlg, UINT wMsg, WPARAM wParam, LPARAM lParam); 
+
+void DoAbout (AboutRecordPtr about)
+{
+	ShowAbout(about);
+}
+
+DLLExport BOOL WINAPI PickerProc(HWND hDlg, UINT wMsg, WPARAM wParam, LPARAM lParam) 
+{
+	int				idd;	
+	static GPtr		globals=NULL;		  
+	long			x = 0;
+	
+	switch (wMsg)
+	{
+
+		case  WM_INITDIALOG:
+
+			globals = (GPtr) lParam;
+			
+			CenterDialog(hDlg);
+			
+		case WM_PAINT:
+			return FALSE;
+			break;
+
+		case WM_COMMAND:
+	  		idd = COMMANDID (wParam);              
+			if (idd == x) 
+				; 
+			else
+			{
+				switch (idd)
+				{
+					case OK:
+						
+						EndDialog(hDlg, idd);
+						break;
+					case CANCEL:
+						gResult = userCanceledErr;
+						EndDialog(hDlg, idd);          
+						break;
+					default:
+						return FALSE;
+						break;
+				}
+			}
+			break;
+		default:
+			return FALSE;
+			break;
+	}
+	return TRUE;
+}
+
+Boolean DoParameters (GPtr globals)
+{
+
+	INT_PTR			nResult = noErr;
+	PlatformData	*platform;
+	
+	platform = (PlatformData *)((PickerRecordPtr) gStuff)->platformData;
+
+	nResult = DialogBoxParam(GetDLLInstance(),
+					   (LPSTR)""PICKERPARAM"",
+					   (HWND)platform->hwnd,
+					   (DLGPROC)PickerProc,
+						(LPARAM)globals);
+
+	return (nResult == OK); 
+}
+"
+102,C++,"
+#include ""webrtc/test/libtest/include/random_encryption.h""
+
+#include <algorithm>
+#include <cmath>
+#include <cstdlib>
+
+#include ""webrtc/video_engine/vie_defines.h""
+
+static int Saturate(int value, int min, int max) {
+  return std::min(std::max(value, min), max);
+}
+
+RandomEncryption::RandomEncryption(unsigned int rand_seed) {
+  srand(rand_seed);
+}
+
+void RandomEncryption::GenerateRandomData(unsigned char* out_data, int bytes_in,
+                                          int* bytes_out) {
+  int out_length = MakeUpSimilarLength(bytes_in);
+  for (int i = 0; i < out_length; i++) {
+    
+    out_data[i] = static_cast<unsigned char>(rand() % 256);
+  }
+  *bytes_out = out_length;
+}
+
+int RandomEncryption::MakeUpSimilarLength(int original_length) {
+  int sign = rand() - RAND_MAX / 2;
+  int length = original_length + sign * rand() % 50;
+
+  return Saturate(length, 0, static_cast<int>(webrtc::kViEMaxMtu));
+}"
+103,C++,"
+#ifndef __BLOCK_CYPHER_HPP
+#define __BLOCK_CYPHER_HPP
+
+#include <iostream>
+#include <string>
+
+#include <boost/asio.hpp>
+#include <boost/asio/ssl.hpp>
+#include <boost/asio/signal_set.hpp>
+#include <boost/algorithm/string/split.hpp>
+#include <boost/algorithm/string.hpp>
+#include <boost/bind.hpp>
+
+using boost::asio::ip::tcp;
+
+namespace joinparty {
+
+class BlockCypherClient
+{
+  typedef std::vector<std::string> chunk_list;
+  
+  public:
+    explicit BlockCypherClient(boost::asio::io_service& io_service,
+        const std::string server, const std::string port);
+
+    void get_fee_estimates(uint64_t& low_fee_per_kb,
+        uint64_t& medium_fee_per_kb, uint64_t& high_fee_per_kb);
+
+  private:
+    void handle_error(const boost::system::error_code& err);
+
+    void handle_signal();
+
+    void handle_write_request(
+        const boost::system::error_code& err);
+
+    void handle_response(const boost::system::error_code& err);
+
+    void process_data(
+        const boost::system::error_code& err, const size_t target_length);
+
+    uint64_t low_fee_per_kb_;
+    uint64_t medium_fee_per_kb_;
+    uint64_t high_fee_per_kb_;
+    tcp::resolver resolver_;
+    boost::asio::ssl::context ctx_;
+    boost::asio::ssl::stream<tcp::socket> socket_;
+    boost::asio::streambuf request_;
+    boost::asio::streambuf response_;
+    boost::asio::signal_set signals_;
+    size_t content_buffer_length_;
+    std::array<char, 1024> content_buffer_;
+};
+ 
+}; 
+
+#endif "
+104,C++,"
+#ifndef UUID_D6250026A17F11DEA29012BF55D89593
+#define UUID_D6250026A17F11DEA29012BF55D89593
+
+#include <boost/la/config.hpp>
+#include <boost/la/deduce_matrix.hpp>
+#include <boost/assert.hpp>
+#include <boost/static_assert.hpp>
+
+namespace
+boost
+	{
+	namespace
+	la
+		{
+		namespace
+		la_detail
+			{
+			template <class T,int Dim>
+			class
+			identity_matrix_
+				{
+				identity_matrix_( identity_matrix_ const & );
+				identity_matrix_ & operator=( identity_matrix_ const & );
+				~identity_matrix_();
+
+				public:
+
+				template <class R>
+				BOOST_LA_INLINE_TRIVIAL
+				operator R() const
+					{
+					R r;
+					assign(r,*this);
+					return r;
+					}
+				};
+			}
+
+		template <class Matrix>
+		struct matrix_traits;
+
+		template <class T,int Dim>
+		struct
+		matrix_traits< la_detail::identity_matrix_<T,Dim> >
+			{
+			typedef la_detail::identity_matrix_<T,Dim> this_matrix;
+			typedef T scalar_type;
+			static int const rows=Dim;
+			static int const cols=Dim;
+
+			template <int Row,int Col>
+			static
+			BOOST_LA_INLINE_CRITICAL
+			scalar_type
+			r( this_matrix const & x )
+				{
+				BOOST_ASSERT(&x==0);
+				BOOST_STATIC_ASSERT(Row>=0);
+				BOOST_STATIC_ASSERT(Row<Dim);
+				BOOST_STATIC_ASSERT(Col>=0);
+				BOOST_STATIC_ASSERT(Col<Dim);
+				return scalar_type(Row==Col);
+				}
+
+			static
+			BOOST_LA_INLINE_CRITICAL
+			scalar_type
+			ir( int row, int col, this_matrix const & x )
+				{
+				BOOST_ASSERT(&x==0);
+				BOOST_ASSERT(row>=0);
+				BOOST_ASSERT(row<Dim);
+				BOOST_ASSERT(col>=0);
+				BOOST_ASSERT(col<Dim);
+				return scalar_type(row==col);
+				}
+			};
+
+		template <class T,int Dim,int R,int C,class S>
+		struct
+		deduce_matrix<la_detail::identity_matrix_<T,Dim>,R,C,S>
+			{
+			typedef mat<S,R,C> type;
+			};
+
+		template <class T,int Dim>
+		BOOST_LA_INLINE_TRIVIAL
+		la_detail::identity_matrix_<T,Dim> const &
+		identity_matrix()
+			{
+			return *(la_detail::identity_matrix_<T,Dim> const *)0;
+			}
+		}
+	}
+
+#endif"
+105,C++,"
+#ifndef energyScalingFunction_H
+#define energyScalingFunction_H
+
+#include ""IOdictionary.H""
+#include ""typeInfo.H""
+#include ""runTimeSelectionTables.H""
+#include ""autoPtr.H""
+#include ""pairPotentialModel.H""
+#include ""reducedUnits.H""
+
+namespace Foam
+{
+
+class energyScalingFunction
+{
+
+protected:
+
+        word name_;
+
+        dictionary energyScalingFunctionProperties_;
+
+        const pairPotentialModel& pairPot_;
+
+        const reducedUnits& rU_;
+
+        energyScalingFunction(const energyScalingFunction&);
+
+        void operator=(const energyScalingFunction&);
+
+public:
+
+    TypeName(""energyScalingFunction"");
+
+        declareRunTimeSelectionTable
+        (
+            autoPtr,
+            energyScalingFunction,
+            dictionary,
+            (
+                const word& name,
+                const dictionary& energyScalingFunctionProperties,
+                const pairPotentialModel& pairPot,
+                const reducedUnits& rU
+            ),
+            (name, energyScalingFunctionProperties, pairPot, rU)
+        );
+
+        static autoPtr<energyScalingFunction> New
+        (
+            const word& name,
+            const dictionary& energyScalingFunctionProperties,
+            const pairPotentialModel& pairPot,
+            const reducedUnits& rU
+        );
+
+        energyScalingFunction
+        (
+            const word& name,
+            const dictionary& energyScalingFunctionProperties,
+            const pairPotentialModel& pairPot,
+            const reducedUnits& rU
+        );
+
+        virtual ~energyScalingFunction()
+        {}
+
+        virtual void scaleEnergy(scalar& e, const scalar r) const = 0;
+
+        const dictionary& energyScalingFunctionProperties() const
+        {
+            return energyScalingFunctionProperties_;
+        }
+
+        virtual bool read
+        (
+            const dictionary& energyScalingFunctionProperties
+        ) = 0;
+};
+
+} 
+
+#endif
+"
+106,C++,"
+#include <string>
+#include <unordered_map>
+
+#include ""proxy_wasm_intrinsics.h""
+
+class ExampleContext : public Context {
+public:
+  explicit ExampleContext(uint32_t id, RootContext* root) : Context(id, root) {}
+
+  FilterHeadersStatus onRequestHeaders(uint32_t) override;
+};
+static RegisterContextFactory register_ExampleContext(CONTEXT_FACTORY(ExampleContext));
+
+FilterHeadersStatus ExampleContext::onRequestHeaders(uint32_t) {
+  auto context_id = id();
+  auto callback = [context_id](uint32_t, size_t body_size, uint32_t) {
+    auto response_headers = getHeaderMapPairs(HeaderMapType::HttpCallResponseHeaders);
+    
+    getContext(context_id)->setEffectiveContext();
+    auto body = getBufferBytes(BufferType::HttpCallResponseBody, 0, body_size);
+    auto response_trailers = getHeaderMapPairs(HeaderMapType::HttpCallResponseTrailers);
+    for (auto& p : response_headers->pairs()) {
+      logInfo(std::string(p.first) + std::string("" -> "") + std::string(p.second));
+    }
+    logDebug(std::string(body->view()));
+    for (auto& p : response_trailers->pairs()) {
+      logWarn(std::string(p.first) + std::string("" -> "") + std::string(p.second));
+    }
+  };
+  root()->httpCall(""cluster"", {{"":method"", ""POST""}, {"":path"", ""/""}, {"":authority"", ""foo""}},
+                   ""hello world"", {{""trail"", ""cow""}}, 1000, callback);
+  return FilterHeadersStatus::StopIteration;
+}"
+107,C++,"
+#ifndef __CELL_ERROR_HPP
+#define __CELL_ERROR_HPP
+
+class CellError : public Condition
+{
+private:
+  static Layout * get_layout_for_class();
+
+public:
+  CellError()
+    : Condition(WIDETAG_CONDITION, get_layout_for_class())
+  {
+    set_slot_value(S_name, NIL);
+  }
+
+  CellError(Value name)
+    : Condition(WIDETAG_CONDITION, get_layout_for_class())
+  {
+    set_slot_value(S_name, name);
+  }
+
+  void initialize(Value initargs);
+
+  virtual Value type_of() const
+  {
+    return S_cell_error;
+  }
+
+  virtual Value class_of() const
+  {
+    return C_cell_error;
+  }
+
+  virtual bool typep(Value type) const;
+};
+
+#endif "
+108,C++,"#include <iostream>
+#include <cstdio>
+#include ""dataset.h""
+#include ""knn.h""
+#include <cassert>
+#include <cmath>
+#include ""testUtils.h""
+
+int main() 
+{
+	double rawData[] = {5.0/11, 4.0/11, 2.0 / 11, 
+						5.0/11, 4.0/11, 2.0 / 11, 
+						 5.0/11, 4.0/11, 2.0 / 11, 
+					 	 5.0/11, 5.0/11, 1.0 / 11}; 
+
+	int labels[] = {0,0,1,1};
+	DatasetPointer sampleData = makeDataset(4, 3, 2, rawData, labels);
+
+	KNNResults target(sampleData);
+
+	SingleExecutionResults actual = target.top1Result();
+
+	assertEquals(2, actual.nSuccess);
+	assertEquals(1, actual.nRejected);
+
+	double MAX_ERROR = 1e-4;
+
+	printf(""%s OK!\n"", __FILE__);
+
+}"
+109,C++,"
+#include ""detail.hpp""
+#include ""char_convert.hpp""
+
+#include <algorithm>
+#include <sstream>
+
+namespace jsonv
+{
+
+const char* kind_desc(kind type)
+{
+    switch (type)
+    {
+    case kind::object:
+        return ""object"";
+    case kind::array:
+        return ""array"";
+    case kind::string:
+        return ""string"";
+    case kind::integer:
+        return ""integer"";
+    case kind::decimal:
+        return ""decimal"";
+    case kind::boolean:
+        return ""boolean"";
+    case kind::null:
+        return ""null"";
+    default:
+        return ""UNKNOWN"";
+    }
+}
+
+bool kind_valid(kind k)
+{
+    switch (k)
+    {
+    case kind::object:
+    case kind::array:
+    case kind::string:
+    case kind::integer:
+    case kind::decimal:
+    case kind::boolean:
+    case kind::null:
+        return true;
+    default:
+        return false;
+    }
+}
+
+void check_type(kind expected, kind actual)
+{
+    if (expected != actual)
+    {
+        std::ostringstream stream;
+        stream << ""Unexpected type: expected "" << kind_desc(expected)
+               << "" but found "" << kind_desc(actual) << ""."";
+        throw kind_error(stream.str());
+    }
+}
+
+void check_type(std::initializer_list<kind> expected, kind actual)
+{
+    if (std::none_of(expected.begin(), expected.end(), [actual] (kind x) { return x == actual; }))
+    {
+        std::ostringstream stream;
+        stream << ""Unexpected type: expected "";
+        std::size_t num = 1;
+        for (kind k : expected)
+        {
+            stream << kind_desc(k);
+            if (num + 1 < expected.size())
+                stream << "", "";
+            else if (num < expected.size())
+                stream << "" or "";
+            ++num;
+        }
+        throw kind_error(stream.str());
+    }
+}
+
+std::ostream& stream_escaped_string(std::ostream& stream, string_view str)
+{
+    stream << ""\"""";
+    detail::string_encode(stream, str);
+    stream << ""\"""";
+    return stream;
+}
+
+}"
+110,C++,"#include <Eigen/Dense>
+#include <iostream>
+
+using namespace Eigen;
+using namespace std;
+
+int main(int, char**)
+{
+  cout.precision(3);
+  MatrixXd m(2,3);
+m << 1,2,3,4,5,6;
+cout << ""here's the 2x3 matrix m:"" << endl << m << endl;
+cout << ""let's resize m to 3x2. This is a conservative resizing because 2*3==3*2."" << endl;
+m.resize(3,2);
+cout << ""here's the 3x2 matrix m:"" << endl << m << endl;
+cout << ""now let's resize m to size 2x2. This is NOT a conservative resizing, so it becomes uninitialized:"" << endl;
+m.resize(2,2);
+cout << m << endl;
+
+  return 0;
+}"
+111,C++,"#include ""glprogram.h""
+#include <gl/gl3w.h>
+#include <cstdio>
+
+bool compileStatus(GLuint shader) {
+	int ret;
+	glGetShaderiv(shader, GL_COMPILE_STATUS, &ret);
+	return ret;
+}
+bool linkStatus(GLuint program) {
+	int ret;
+	glGetProgramiv(program, GL_LINK_STATUS, &ret);
+	return ret;
+}
+
+bool compileShader(GLuint handle, GLenum stype, const char* src) {
+	int shader_len = strlen(src);
+	glShaderSource(handle, 1, &src, &shader_len);
+	glCompileShader(handle);
+	if (!compileStatus(handle)) {
+	    char buff[2048];
+	    int nwritten;
+		glGetShaderInfoLog(handle, 2048, &nwritten, buff);
+
+		const char* typelabel = stype == GL_VERTEX_SHADER ? ""vertex"" : (stype == GL_FRAGMENT_SHADER ? ""fragment"" : ""unknown"");
+		printf(""Error in %s shader\n%s\n"", typelabel, buff);
+		return false;
+	}
+	return true;
+}
+int compileShader(GLenum type, const char* src) {
+	GLuint handle = glCreateShader(type);
+	compileShader(handle, type, src);
+	return handle;
+}
+
+bool linkProgram(GLuint handle, GLuint vshader, GLuint fshader) {
+	glAttachShader(handle, vshader);
+	glAttachShader(handle, fshader);
+	glLinkProgram(handle);
+	if (!linkStatus(handle)) {
+	    char buff[2048];
+	    int nwritten;
+		glGetProgramInfoLog(handle, 2048, &nwritten, buff);
+		printf(""Program link error:\n%s\n"", buff);
+		return false;
+	}
+	return true;
+}
+int linkProgram(const char* vshader_src, const char* fshader_src) {
+	GLuint program = glCreateProgram();
+	GLuint vshader = compileShader(GL_VERTEX_SHADER, vshader_src);
+	GLuint fshader = compileShader(GL_FRAGMENT_SHADER, fshader_src);
+	if (!linkProgram(program, vshader, fshader)) {
+		glDeleteProgram(program);
+		program = 0;
+	}
+	glDeleteShader(vshader);
+	glDeleteShader(fshader);
+	return program;
+}"
+112,C++,"#pragma ident ""$Id:$""
+
+#ifndef CNAVMESSAGEASM_HPP
+#define CNAVMESSAGEASM_HPP
+
+#include ""MDPNavSubframe.hpp""
+#include ""GPSOrbElemStore.hpp""
+#include ""ObsID.hpp""
+#include ""PackedNavBits.hpp""
+#include ""SatID.hpp""
+
+class CNAVMessageAsm
+{
+public:
+   CNAVMessageAsm();
+   ~CNAVMessageAsm() {}
+
+   void addMDPNavSubframe( const gpstk::MDPNavSubframe& mdpsf); 
+
+   gpstk::PackedNavBits* currentMsgMap[3];
+   short currentWeek;
+   bool weekSet; 
+
+private: 
+   short getMessageType(const gpstk::MDPNavSubframe& mdpsf);
+   short getPRNID(const gpstk::MDPNavSubframe& mdpsf);
+   short getWeek(const gpstk::MDPNavSubframe& mdpsf);
+   unsigned long getTOWCount(const gpstk::MDPNavSubframe& mdpsf);
+};
+
+#endif
+"
+113,C++,"
+#include ""syscall.hpp""
+#include <diag\Trace.h>
+
+namespace os {
+#if 0
+static void dispatch_syscall(void) naked_function;
+static void dispatch_syscall(void)
+{
+  __asm__ __volatile__
+  (
+    "" sub sp, sp, #16\n""           
+    "" str r4, [sp, #0]\n""          
+    "" str r5, [sp, #4]\n""          
+    "" str r6, [sp, #8]\n""          
+    "" str lr, [sp, #12]\n""         
+    "" ldr ip, =g_stublookup\n""     
+    "" ldr ip, [ip, r0, lsl #2]\n""  
+    "" blx ip\n""                    
+    "" ldr lr, [sp, #12]\n""         
+    "" add sp, sp, #16\n""           
+    "" mov r2, r0\n""                
+    "" mov r0, #3\n""                
+    "" svc 0""                       
+  );
+}
+#endif
+
+}
+#if 0
+enum register_stack_t {
+	
+	REG_R0,
+	REG_R1,
+	REG_R2,
+	REG_R3,
+	REG_R12,
+	REG_LR,
+	REG_PC,
+	REG_xPSR
+};
+
+#define RESERVED_STACK \
+	(8 * sizeof(uint32_t))
+
+static void dispatch_syscall() __attribute((naked));
+static void dispatch_syscall(uint32_t* caller) __attribute((naked)){
+	uint32_t svc_num = ((char *) caller[REG_PC])[-2];
+}
+	void syscall_init(uint8_t nbr, uintptr_t call){
+		assert(nbr < MAX_SYSCALLS);
+		caller = call;
+	}
+}
+template<uintptr_t FROM, uintptr_t TO> static inline void copy_stack(){
+	__asm volatile(
+		""ldr r12, [sp, %0]\n""
+		""str r12, [sp, %1]\n""
+	: ""i""(FROM), ""i""(TO) ::""r12"");
+}
+__attribute((always_inline) )static inline void copy_memory(uintptr from, uintptr_t to)
+__attribute((always_inline) )static inline void copy_stack() {
+	__asm__ __volatile__ (""push {r12 }sub sp, #(8*4)\n"");
+	copy_stack<REG_R0+8, REG_R0>();
+}
+#endif
+
+#if 0
+extern ""C"" void SVC_Handler() {
+	assert(0);
+
+}
+#endif
+"
+114,C++,"
+#include ""RenderCamera.h""
+
+using namespace BLA;
+
+void RenderCamera::AttachCamera(CameraComponent* camera)
+{
+    this->m_attachedCamera = camera;
+}
+
+void PerspectiveCamera::SetAspect(blaVec2 renderSize)
+{
+    m_aspectRatio = renderSize.x / renderSize.y;
+}
+
+static blaMat4 GetPerspective(blaF32 horizontalFovRad, blaF32 verticalFovRad, blaF32 nearClipPlane, blaF32 farClipPlane)
+{
+    return blaMat4(
+        blaVec4(0.5f / tanf(0.5f * horizontalFovRad), 0.f, 0.f, 0.f),
+        blaVec4(0.f, 0.5f / tanf(0.5f * verticalFovRad), 0.f, 0.f),
+        blaVec4(0.f, 0.f, nearClipPlane / (nearClipPlane - farClipPlane), -1.f),
+        blaVec4(0.0f, 0.0f, (farClipPlane * nearClipPlane) / (nearClipPlane - farClipPlane), 0.f)
+    );
+}
+
+void PerspectiveCamera::Update()
+{
+    this->m_attachedCamera->Update();
+
+    blaF32 horFovRad = m_attachedCamera->m_fov * DEG_TO_RAD;
+    blaF32 vertFovRad = horFovRad / m_aspectRatio;
+	
+    m_perspectiveProjection = GetPerspective(horFovRad, vertFovRad, m_attachedCamera->m_nearClipPlane, m_attachedCamera->m_farClipPlane);
+	
+    blaMat4 cameraTransformMat;
+    m_attachedCamera->m_worldToCamera.GetScaledTransformMatrix(cameraTransformMat);
+
+    if (m_attachedCamera != nullptr)
+        m_worldToClipSpace = m_perspectiveProjection * cameraTransformMat;
+    else
+        m_worldToClipSpace = blaMat4(1);
+}
+
+RenderCamera::RenderCamera()
+{
+    this->m_attachedCamera = nullptr;
+}
+
+void OrthographicCamera::SetOrthographicProj(float left, float right, float bottom, float top)
+{
+    m_orthographicProjection = glm::ortho<float>(left, right, bottom, top, -100, 10000);
+}
+
+void OrthographicCamera::Update()
+{
+    this->m_attachedCamera->Update();
+
+    blaMat4 cameraTransformMat;
+    m_attachedCamera->m_worldToCamera.GetScaledTransformMatrix(cameraTransformMat);
+
+    if (m_attachedCamera != nullptr)
+        m_worldToClipSpace = m_orthographicProjection * cameraTransformMat;
+    else
+        m_worldToClipSpace = blaMat4(1);
+}"
+115,C++,"#ifndef QT_SETTINGSPORTS_HPP
+#define QT_SETTINGSPORTS_HPP
+
+#include <QWidget>
+
+namespace Ui {
+class SettingsPorts;
+}
+
+class SettingsPorts : public QWidget
+{
+    Q_OBJECT
+
+public:
+    explicit SettingsPorts(QWidget *parent = nullptr);
+    ~SettingsPorts();
+
+    void save();
+private slots:
+    void on_checkBoxParallel3_stateChanged(int arg1);
+    void on_checkBoxParallel2_stateChanged(int arg1);
+    void on_checkBoxParallel1_stateChanged(int arg1);
+
+    void on_checkBoxParallel4_stateChanged(int arg1);
+
+private:
+    Ui::SettingsPorts *ui;
+};
+
+#endif "
+116,C++,"#ifndef _Voice
+#define _Voice
+
+#include <jack/jack.h>
+#include <iostream>
+#include <math.h>
+
+#include <oscpack/osc/OscTypes.h>
+
+#include ""def.hpp""
+#include ""sound.hpp""
+
+using namespace osc;
+
+enum VoiceStatus {VOICE_IDLE, VOICE_PLAYING, VOICE_LOOPING};
+
+class Voice {
+public:
+  Voice(int channels, int buffer_size, int samplerate);
+  ~Voice();
+  
+  int play(Sound *sound, jack_nframes_t when);
+  int reset();
+  int advance();
+  bool write(sample** buffers, jack_nframes_t frame_time);
+  VoiceStatus get_status();
+
+private:
+  Sound *m_sound;
+
+  uint64 start_timestamp;
+
+  int m_samplerate;
+  int m_buffer_size;
+  int m_channels;
+  int m_offset;
+  jack_nframes_t m_when;
+  VoiceStatus m_status;
+
+};
+
+#endif"
+117,C++,"
+#ifndef STARTPOINT_HPP
+#define STARTPOINT_HPP
+
+#include ""OrderedTaskPoint.hpp""
+#include ""Task/TaskBehaviour.hpp""
+#include ""Task/Ordered/StartConstraints.hpp""
+
+class StartPoint final : public OrderedTaskPoint {
+  fixed safety_height;
+
+  TaskStartMargins margins;
+
+  StartConstraints constraints;
+
+public:
+  
+  StartPoint(ObservationZonePoint *_oz,
+             const Waypoint &wp,
+             const TaskBehaviour &tb,
+             const StartConstraints &constraints);
+
+  bool DoesRequireArm() const {
+    return constraints.require_arm;
+  }
+
+  void SetHasExitedOverride () {
+    ScoredTaskPoint::SetHasExited(true);
+  }
+
+  void find_best_start(const AircraftState &state,
+                       const OrderedTaskPoint &next,
+                       const TaskProjection &projection,
+                       bool subtract_start_radius);
+
+  virtual fixed GetElevation() const override;
+
+  virtual bool CheckExitTransition(const AircraftState &ref_now,
+                                   const AircraftState &ref_last) const override;
+
+  virtual void SetTaskBehaviour(const TaskBehaviour &tb) override;
+  virtual void SetOrderedTaskSettings(const OrderedTaskSettings &s) override;
+  virtual void SetNeighbours(OrderedTaskPoint *prev,
+                             OrderedTaskPoint *next) override;
+  virtual bool IsInSector(const AircraftState &ref) const override;
+  virtual bool UpdateSampleNear(const AircraftState &state,
+                                const TaskProjection &projection) override;
+
+private:
+  
+  virtual bool ScoreLastExit() const override {
+    return true;
+  }
+};
+
+#endif"
+118,C++,"
+#include ""async.h""
+
+class my_resizer_t : public vec_resizer_t {
+public:
+  my_resizer_t () : vec_resizer_t () {}
+  size_t resize (u_int nalloc, u_int nwanted, int objid);
+};
+
+size_t
+my_resizer_t::resize (u_int nalloc, u_int nwanted, int objid)
+{
+  int exponent = fls (max (nalloc, nwanted));
+
+  int step;
+
+  if (exponent < 3) step = 1;
+  else if (exponent < 8) step = 3;
+  else if (exponent < 10) step = 2;
+  else step = 1;
+
+  exponent = ((exponent - 1) / step + 1) * step;
+  size_t ret = 1 << exponent;
+
+  warn << ""resize: "" << nalloc << "","" << nwanted << "","" << objid 
+       << "" -> "" << ret << ""\n"";
+
+  return ret;
+}
+
+template<>
+struct vec_obj_id_t<int>
+{
+  vec_obj_id_t (){}
+  int operator() (void) const { return 1; }
+};
+
+static void
+vec_test (vec<int> &v, int n)
+{
+  for (int i = 0; i < n; i++) {
+    v.push_back (i);
+  }
+  for (int i = n - 1; i >= 0; i--) {
+    assert (v.pop_back () == i);
+  }
+}
+
+static void
+vec_test (void)
+{
+  vec<int> v1, v2;
+  int n = 100;
+
+  vec_test (v1, n);
+  set_vec_resizer (New my_resizer_t ());
+  vec_test (v2, n);
+}
+
+int
+main (int argc, char *argv[])
+{
+  vec_test ();
+  return 0;
+}"
+119,C++,"#ifndef ___INANITY_SCRIPT_LUA_STUFF_HPP___
+#define ___INANITY_SCRIPT_LUA_STUFF_HPP___
+
+#include ""lua.hpp""
+#include ""MetaProvider.hpp""
+#include ""lualib.hpp""
+#include ""../../String.hpp""
+#include <iostream>
+
+BEGIN_INANITY
+
+class Exception;
+
+END_INANITY
+
+BEGIN_INANITY_LUA
+
+int MetaTable_index(lua_State* state);
+
+void PushClassMetaTable(lua_State* state, MetaProvider::ClassBase* cls);
+
+void RegisterClassMeta(lua_State* state, MetaProvider::ClassBase* cls);
+
+int ObjectMetaTable_gc(lua_State* state);
+
+void ReclaimObjectFromUserData(lua_State* state);
+
+void ReclaimObject(lua_State* state, RefCounted* object);
+
+void PushObjectMetaTable(lua_State* state, MetaProvider::ClassBase* cls);
+
+void ThrowError(lua_State* state, ptr<Exception> exception);
+
+ptr<Exception> ErrorToException(lua_State* state);
+
+void ProcessError(lua_State* state);
+
+int ScriptErrorHook(lua_State* state);
+
+void DescribeValue(lua_State* state, int index, std::ostream& stream);
+
+END_INANITY_LUA
+
+#endif"
+120,C++,"#include <bits/stdc++.h>
+
+using namespace std;
+
+void solve() {
+    string s; cin >> s;
+    reverse(s.begin(), s.end());
+    vector<string> pre = {""dream"", ""dreamer"", ""erase"", ""eraser""};
+    for (auto& x: pre) {
+        reverse(x.begin(), x.end());
+    }
+    int i = 0, n = s.size();
+    while (i < n) {
+        if (s.substr(i, 5) == pre[0] || s.substr(i, 5) == pre[2])
+            i += 5;
+        else if (s.substr(i, 6) == pre[3])
+            i += 6;
+        else if (s.substr(i, 7) == pre[1])
+            i += 7;
+        else {
+            cout << ""NO""; return;
+        }
+    }
+    cout << ""YES"";
+}
+
+int main() {
+    ios_base::sync_with_stdio(false);
+    cin.tie(NULL);
+    solve();
+    cout << endl;
+}"
+121,C++,"#include ""barista_core/barista_core.h""
+#include ""decafs_types/ip_address.h""
+
+#include ""network_fake.h""
+
+#define MIN_ARGS 6
+#define STRIPE_SIZE 1
+#define CHUNK_SIZE 2
+#define METADATA 3
+#define NUM_ESPRESSOS 4
+#define PORT 5
+
+int main(int argc, char** argv) {
+
+   char* args[] = {(char*)"""", (char*)""1024"", (char*)""512"", (char*)""barista_metadata"", (char*)""4"", (char*)""1024""};
+   barista_core_init(6, args);
+
+   set_node_up(1);
+   set_node_up(2);
+   set_node_up(3);
+   set_node_up(4);
+ 
+   struct ip_address ipaddr1 = ip_address((char*)""192.168.1.1""); 
+   ConnectionToClient* ctc = NULL; 
+   struct client client1 = client(ipaddr1, 1, ctc);
+
+   open_file(""hello.txt"", O_RDWR, client1);
+   std::string teststr(""testwrite"");
+   write_file(1, teststr.c_str(), teststr.size(), client1); 
+
+   close_file(1, client1);
+   open_file(""hello.txt"", O_RDWR, client1);
+ 
+   read_file(2, teststr.size(), client1); 
+}"
+122,C++,"#include <bits/stdc++.h>
+using namespace std;
+
+#define sd(x) scanf(""%d"",&x)
+#define su(x) scanf(""%u"",&x)
+#define slld(x) scanf(""%lld"",&x)
+#define sc(x) scanf(""%c"",&x)
+#define ss(x) scanf(""%s"",x)
+#define sf(x) scanf(""%f"",&x)
+#define slf(x) scanf(""%lf"",&x)
+#define ll long long int
+#define mod(x,n) (x+n)%n
+
+int ceil(int n,int x) 
+{
+	if(n%x==0)
+		return n/x;
+	return n/x+1;
+}
+
+int main()
+{
+	
+	int i,j,k,l=0,m,n;
+
+	sd(n);	sd(k);
+
+	for(i=0;i<n;i++)
+	{
+		sd(m);
+		l+=ceil(m,k);
+	}
+
+	printf(""%d\n"", ceil(l,2) );
+	
+	return 0;
+}"
+123,C++,"
+#include <fstream>
+#include ""ArchitectureBrowser.hpp""
+#include ""torc/common/DirectoryTree.hpp""
+
+int main(int argc, char *argv[]) {
+	typedef std::string string;
+	torc::common::DirectoryTree directoryTree(argv[0]);
+		
+	if (argc != 2) {
+		std::cout << ""Usage: "" << argv[0] << "" <device>"" << std::endl;
+		return 1;
+	}
+	string device_arg = argv[1];
+	
+	torc::common::DeviceDesignator device(device_arg);
+	torc::architecture::DDB db(device);
+	torc::ArchitectureBrowser ab(db);
+	ab.browse();
+	
+	return 0;
+}
+"
+124,C++,"
+#include <xgboost/logging.h>
+#include ""src/common/random.h""
+#include ""./xgboost_R.h""
+
+namespace dmlc {
+void CustomLogMessage::Log(const std::string& msg) {
+  Rprintf(""%s\n"", msg.c_str());
+}
+}  
+
+extern ""C"" {
+  void XGBoostAssert_R(int exp, const char *fmt, ...);
+  void XGBoostCheck_R(int exp, const char *fmt, ...);
+}
+
+namespace rabit {
+namespace utils {
+extern ""C"" {
+  void (*Printf)(const char *fmt, ...) = Rprintf;
+  void (*Assert)(int exp, const char *fmt, ...) = XGBoostAssert_R;
+  void (*Check)(int exp, const char *fmt, ...) = XGBoostCheck_R;
+  void (*Error)(const char *fmt, ...) = error;
+}
+}
+}
+
+namespace xgboost {
+ConsoleLogger::~ConsoleLogger() {
+  dmlc::CustomLogMessage::Log(log_stream_.str());
+}
+TrackerLogger::~TrackerLogger() {
+  dmlc::CustomLogMessage::Log(log_stream_.str());
+}
+}  
+
+namespace xgboost {
+namespace common {
+
+bool CheckNAN(double v) {
+  return ISNAN(v);
+}
+double LogGamma(double v) {
+  return lgammafn(v);
+}
+
+void CustomGlobalRandomEngine::seed(CustomGlobalRandomEngine::result_type val) {
+  
+}
+
+CustomGlobalRandomEngine::result_type
+CustomGlobalRandomEngine::operator()() {
+  return static_cast<result_type>(
+      std::floor(unif_rand() * CustomGlobalRandomEngine::max()));
+}
+}  
+}  "
