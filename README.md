@@ -284,5 +284,17 @@ Despite having the highest parameter count, **codellama:70b** underperformed—o
 
 
 
+### Supplementary: Inference Speeds
+
+The table below shows inference performance metrics for each model, measured on a Mac Machine with an **M3 Ultra Chip** and **256GB of VRAM**. Results may vary depending on system load, code complexity, and other factors, but these figures provide a comparative baseline for average processing times and token speeds.
+
+
+<img width="741" alt="Screenshot 2025-04-13 at 12 43 52 PM" src="https://github.com/user-attachments/assets/94b4cfbf-7838-40bf-a205-1978a9912946" />
+
+
+> **Note:**  
+> - All measurements were taken on a Mac with **M3 Ultra** and **256GB VRAM**.  
+> - The **Avg Prompt1** and **Avg Prompt2** columns capture the average time (in seconds) it took each model to complete two main inference steps (or prompts).  
+> - **Avg Overall Speed (tokens/s)** represents an aggregated throughput measure across both prompts.
 
 
