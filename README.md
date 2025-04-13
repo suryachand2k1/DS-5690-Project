@@ -276,7 +276,7 @@ Models such as **qwen2.5-coder:32b** and **codestral** consistently received hig
 
 #### Unexpected Underperformance
 
-Despite having the highest parameter count, **codellama:70b** underperformed—often returning only short summaries or default messages (e.g., stating that documentation cannot be provided due to harmful/unethical or proprietary content, where on manually verifying those samples I confirm there is no sunch content or license in those samples) instead of full documentation.
+Despite having the highest parameter count, **codellama:70b** underperformed—often returning only short summaries or default messages (e.g., stating that documentation cannot be provided due to harmful/unethical or proprietary content, where on manually verifying those samples I confirm there is NO such content or license present) instead of full documentation.
 
 ---
 
