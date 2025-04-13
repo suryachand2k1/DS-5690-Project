@@ -169,12 +169,14 @@ For more details, see the full code [here](https://github.com/suryachand2k1/DS-5
      Is the appropriate comment or docstring syntax used for the language?
   9. **Language-Specific Formatting - Correct Placement:**  
      Are documentation blocks placed immediately before or inside the relevant code blocks?
-  11. **Preservation of Original Code - Functionality Unchanged:**  
+  10. **Preservation of Original Code - Functionality Unchanged:**  
       Has the original code logic been left intact?
-  12. **Preservation of Original Code - Structure Preserved:**  
+  11. **Preservation of Original Code - Structure Preserved:**  
       Is the original formatting and structure maintained?
-  13. **Complete Preservation of Original Code - Unchanged Original Code:**  
-      Is there no modification or omission of the original code?  
+  12. **Complete Preservation of Original Code - Unchanged Original Code:**  
+      Is there no modification or omission of the original code?
+  13. **Comment Quality - Ease of Understanding:**  
+      Do the comments employ straightforward language that non-native English speakers can easily understand?
   14. **Overall Compliance - Full Adherence:**  
       Does the documented code fully follow the provided instructions?
       
