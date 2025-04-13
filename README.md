@@ -169,16 +169,15 @@ For more details, see the full code [here](https://github.com/suryachand2k1/DS-5
      Is the appropriate comment or docstring syntax used for the language?
   9. **Language-Specific Formatting - Correct Placement:**  
      Are documentation blocks placed immediately before or inside the relevant code blocks?
-  10. **Preservation of Original Code - Functionality Unchanged:**  
+  11. **Preservation of Original Code - Functionality Unchanged:**  
       Has the original code logic been left intact?
-  11. **Preservation of Original Code - Structure Preserved:**  
+  12. **Preservation of Original Code - Structure Preserved:**  
       Is the original formatting and structure maintained?
-  12. **Overall Compliance - Full Adherence:**  
+  13. **Complete Preservation of Original Code - Unchanged Original Code:**  
+      Is there no modification or omission of the original code?  
+  14. **Overall Compliance - Full Adherence:**  
       Does the documented code fully follow the provided instructions?
-  13. **Original Code Inclusion - Presence of Original Code Section:**  
-      Is the complete original code included as a separate section?
-  14. **Complete Preservation of Original Code - Completeness:**  
-      Is there no modification or omission of the original code?
+      
 - **Scoring Approach:**  
   - Each criterion is answered with Yes/No (1 point for Yes).
   - All individual scores are aggregated for a final score out of 14.
