@@ -260,15 +260,13 @@ Based on my initial assumption, here is the ranking (from best to worst predicte
 
 After analyzing the scorings from our evaluation LLMs (GPT-4o, DeepSeek, Gemini, and Anthropic's Claude), I observed the following trends in documentation quality:
 
-<img width="742" alt="Screenshot 2025-04-12 at 4 22 32 PM" src="https://github.com/user-attachments/assets/dcaa4925-e468-4fab-86d4-8305625a673a" />
-
-
 <img width="745" alt="Screenshot 2025-04-12 at 4 21 59 PM" src="https://github.com/user-attachments/assets/85f8428d-d522-4f54-9835-1a48cd72d214" />
 
 <img width="626" alt="Screenshot 2025-04-12 at 4 22 09 PM" src="https://github.com/user-attachments/assets/6d6b2faf-21ae-4482-a235-fd432ed5b008" />
 
 <img width="382" alt="Screenshot 2025-04-12 at 4 21 47 PM" src="https://github.com/user-attachments/assets/977d2dbc-faa6-4760-9e7d-167375d302da" />
 
+<img width="742" alt="Screenshot 2025-04-12 at 4 22 32 PM" src="https://github.com/user-attachments/assets/dcaa4925-e468-4fab-86d4-8305625a673a" />
 
 #### Consistent High Scorers
 Models such as **qwen2.5-coder:32b** and **codestral** consistently received high scores, indicating detailed and well-structured documentation.  
