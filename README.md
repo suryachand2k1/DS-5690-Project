@@ -256,7 +256,7 @@ Based on my initial assumption, here is the ranking (from best to worst predicte
 
 
 
-### Observed on Documentation Quality Results from Scoring LLMs
+### Observed Documentation Quality Results from Scoring LLMs
 
 After analyzing the scorings from our evaluation LLMs (GPT-4o, DeepSeek, Gemini, and Anthropic's Claude), I observed the following trends in documentation quality:
 
