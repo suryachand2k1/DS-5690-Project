@@ -1,6 +1,7 @@
 # DS-5690-Project: Assessing Code Documentation Quality from Popular Code LLMs <=70b parameters Using LLM as a Judge approach with Majority Voting
 
 ---
+---
 
 ## 1. Problem Statement & Overview
 
@@ -40,7 +41,7 @@ The decision to focus on models with 70B parameters or fewer is primarily driven
   Within this VRAM limit, models up to 70B parameters are optimal for running on a single machine, making them both accessible and practical since most people cannot build and manage compute clusters.
 
 ---
-
+---
 ## 2. Methodology
 
 ### Dataset Overview
@@ -213,6 +214,7 @@ The evaluation data from multiple systems (Anthropic, DeepSeek, Gemini, and GPT-
 For the complete aggregation process, refer to the [Aggregation Code](https://github.com/suryachand2k1/DS-5690-Project/blob/main/Align_the_score_csv.ipynb).
 
 ---
+---
 
 ## Results and Discussions
 
@@ -230,20 +232,13 @@ Below is a table displaying our documentation models used:
 
 **Question:**  
 How would you order these models on our documentation task?  
-
-<!-- Leave space for your predictions -->
-
----
-
-<!-- Leave several blank lines below the question for clarity -->
-
-  
-  
-  
-  
-  
-  
-  
+<br />
+<br />
+<br />
+<br />
+<br />
+<br />
+<br />  
 Based on my initial assumption, here is the ranking (from best to worst predicted performance):
 
 | Model Name         | Parameter Size |
@@ -291,7 +286,7 @@ Despite having the highest parameter count, **codellama:70b** underperformed—o
 - These results suggest that on the code documentation task, a higher parameter count does not necessarily equate to better performance.
 
 ---
-
+---
 ### Supplementary: Inference Speeds
 
 The table below shows inference performance metrics for each model, measured on a Mac Machine with an **M3 Ultra Chip** and **256GB of VRAM**. Results may vary depending on system load, code complexity, and other factors, but these figures provide a comparative baseline for average processing times and token speeds.
