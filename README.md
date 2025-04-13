@@ -202,8 +202,88 @@ For the complete aggregation process, refer to the [Aggregation Code](https://gi
 
 
 
+## Results and Discussions
+
+
+### Initial Prediction of Model Performance Based on Specifications
+
+Below is a table displaying our documentation models used:
+
+| Model Name         | Parameter Size |
+|--------------------|----------------|
+| deepseek-coder     | 33B            |
+| qwen2.5-coder      | 32B            |
+| codellama          | 70B            |
+| codestral          | 22B            |
+| codegemma          | 7B             |
+
+**Question:**  
+How would you order these models on our documentation task?  
+
+<!-- Leave space for your predictions -->
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Based on my initial assumption, here is the ranking (from best to worst predicted performance):
+
+| Model Name         | Parameter Size |
+|--------------------|----------------|
+| codellama          | 70B            |
+| deepseek-coder     | 33B            |
+| qwen2.5-coder      | 32B            |
+| codestral          | 22B            |
+| codegemma          | 7B             |
+
+
+
+### Observed Performance Results from Scoring LLMs
+
+After analyzing the scorings from our evaluation LLMs (GPT-4o, DeepSeek, Gemini, and Anthropic's Claude), I observed the following trends in documentation quality:
+
+<img width="742" alt="Screenshot 2025-04-12 at 4 22 32 PM" src="https://github.com/user-attachments/assets/dcaa4925-e468-4fab-86d4-8305625a673a" />
+
+
+<img width="745" alt="Screenshot 2025-04-12 at 4 21 59 PM" src="https://github.com/user-attachments/assets/85f8428d-d522-4f54-9835-1a48cd72d214" />
+
+<img width="626" alt="Screenshot 2025-04-12 at 4 22 09 PM" src="https://github.com/user-attachments/assets/6d6b2faf-21ae-4482-a235-fd432ed5b008" />
+
+<img width="382" alt="Screenshot 2025-04-12 at 4 21 47 PM" src="https://github.com/user-attachments/assets/977d2dbc-faa6-4760-9e7d-167375d302da" />
+
+
+#### Consistent High Scorers
+Models such as **qwen2.5-coder:32b** and **codestral** consistently received high scores, indicating detailed and well-structured documentation.  
+
+
+#### Moderate Performers
+**deepseek-coder:33b** and **codegemma:7b** showed moderate performance with some variability between individual samples.  
+
+#### Unexpected Underperformance
+Despite having the highest parameter count, **codellama:70b** underperformed—often returning only short summaries or default messages (e.g., stating that documentation cannot be provided due to harmful/unethical or proprietary content) instead of full documentation.  
+
+#### Additional Observations
+- The aggregated scores reveal a clear divergence in documentation quality. High-scoring models delivered more complete and instructive outputs, while codellama frequently fell short of expectations.
+- All scoring systems consistently ranked the models similarly, reinforcing the reliability of our unified, binary evaluation rubric.
+- These results suggest that on the code documentation task, a higher parameter count does not necessarily equate to better performance.
+  
 
 
