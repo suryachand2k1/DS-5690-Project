@@ -81,7 +81,7 @@ The **CodeParrot GitHub Code Dataset** is a large-scale collection of open-sourc
     - min_length = 500            # Minimum length (in characters) after cleaning  
     - max_length = 2000           # Maximum length (in characters) after cleaning
 
-- **[Sampled Data](https://github.com/suryachand2k1/DS-5690-Project/blob/main/github_code_sample_random_5langs.csv)**
+**[Sampled Data](https://github.com/suryachand2k1/DS-5690-Project/blob/main/github_code_sample_random_5langs.csv)**
 
 ---
 
