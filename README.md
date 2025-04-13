@@ -61,7 +61,7 @@ The **CodeParrot GitHub Code Dataset** is a large-scale collection of open-sourc
 - **Considerations:**  
   - Variability in file quality and potential presence of sensitive content (e.g., passwords, API keys).
 
-**[Dataset :](https://huggingface.co/datasets/codeparrot/github-code)**
+**[Dataset](https://huggingface.co/datasets/codeparrot/github-code)**
 
 ---
 
