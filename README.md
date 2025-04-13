@@ -260,13 +260,7 @@ Based on my initial assumption, here is the ranking (from best to worst predicte
 
 After analyzing the scorings from our evaluation LLMs (GPT-4o, DeepSeek, Gemini, and Anthropic's Claude), I observed the following trends in documentation quality:
 
-| ![Image 1](<img width="742" alt="Screenshot 2025-04-12 at 4 22 32 PM" src="https://github.com/user-attachments/assets/a89690dd-41b9-48ba-8bde-4b210733fc6d" />
-) | ![Image 2](<img width="745" alt="Screenshot 2025-04-12 at 4 21 59 PM" src="https://github.com/user-attachments/assets/413f59f9-9a9a-4865-813e-b285ca3b96f2" />
-) |
-|------------------------|------------------------|
-| ![Image 3](<img width="626" alt="Screenshot 2025-04-12 at 4 22 09 PM" src="https://github.com/user-attachments/assets/c6571a37-43fa-4fee-a429-c35faa80f702" />
-) | ![Image 4](<img width="382" alt="Screenshot 2025-04-12 at 4 21 47 PM" src="https://github.com/user-attachments/assets/31489513-54d2-4ab6-b95e-5542a77a696f" />
-) |
+![Collage maker project](https://github.com/user-attachments/assets/192b2ec0-faa2-4bb0-ac24-f1edf032bd5b)
 
 
 #### Consistent High Scorers
