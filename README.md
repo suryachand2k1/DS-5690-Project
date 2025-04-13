@@ -1,13 +1,19 @@
 # DS-5690-Project: Assessing Code Documentation Quality from Popular Code LLMs <=70b parameters Using LLM as a Judge approach with Majority Voting
 
+---
+
 ## 1. Problem Statement & Overview
 
-
 ### Problem Statement and Project Overview
-The project aims to evaluate how good local models are in both code understanding and documentation. It also investigates whether increasing the number of parameters leads to better results, providing insights for anyone interested in running a code assistant locally. This project presents a systematic approach to assess the quality of automated code documentation. It integrates data preprocessing, prompt engineering, and a evaluation strategy to uncover insights into how different code LLMs perform in generating useful and understandable documentation.
+
+The project aims to evaluate how good local models are in both code understanding and documentation. It also investigates whether increasing the number of parameters leads to better results, providing insights for anyone interested in running a code assistant locally. This project presents a systematic approach to assess the quality of automated code documentation. It integrates data preprocessing, prompt engineering, and an evaluation strategy to uncover insights into how different code LLMs perform in generating useful and understandable documentation.
+
+---
 
 ### Proposed Approach
+
 To tackle this challenge, the project follows these key steps:
+
 - **Dataset Preparation:**  
   Leverage and clean data from the *codeparrot/github-code* dataset to ensure a diverse and high-quality set of code samples.
 - **Prompt Engineering:**  
@@ -22,13 +28,18 @@ To tackle this challenge, the project follows these key steps:
 - **Evaluation Framework:**  
   Use an LLM-as-a-judge strategy, utilizing state-of-the-art scoring models (GPT-4o, Deepseek v3, Claude 3.7 sonnet, Gemini-2.0-flash) with a majority voting mechanism to ensure robust and objective evaluation of the generated documentation.
 
+---
+
 ### Reason for Choosing Models ≤70B
+
 The decision to focus on models with 70B parameters or fewer is primarily driven by hardware constraints:
+
 - **Hardware Limitations:**  
   Modern high-end laptops, those from Apple(M4), typically offer around ~128GB of VRAM (Highest for a single laptop).
 - **Single Machine Feasibility:**  
   Within this VRAM limit, models up to 70B parameters are optimal for running on a single machine, making them both accessible and practical since most people cannot build and manage compute clusters.
 
+---
 
 ## 2. Methodology
 
@@ -37,6 +48,7 @@ The decision to focus on models with 70B parameters or fewer is primarily driven
 The **CodeParrot GitHub Code Dataset** is a large-scale collection of open-source code files, gathered from public GitHub repositories via BigQuery. It is designed for tasks like language modeling and code generation, supporting a diverse array of programming languages and licenses.
 
 **Key Highlights:**
+
 - **Scale:**  
   - ~115 million files  
   - Approximately 1TB uncompressed (~300GB compressed)
@@ -50,16 +62,16 @@ The **CodeParrot GitHub Code Dataset** is a large-scale collection of open-sourc
 
 **[Dataset :](https://huggingface.co/datasets/codeparrot/github-code)**
 
+---
+
 ### Random Sampling and Preprocessing
 
 - **Code Cleaning:**  
-  - Remove comments, docstrings, and extra blank lines while keeping code structure intact.
+  - Remove comments, docstrings, and extra blank lines while keeping code structure intact.  
   - Discard snippets with embedded license information since many LLMs filter these out to protect copyright.
-
 - **Quality Checks:**  
-  - Keep code samples with a length between 500 and 2000 characters.
+  - Keep code samples with a length between 500 and 2000 characters.  
   - Only include snippets containing at least one function or class definition.
-
 - **Sampling Criteria:**  
   - Target Languages: Python, C, Java, JavaScript, C++.
   - Random Sampling 25 snippets per language.
@@ -68,8 +80,9 @@ The **CodeParrot GitHub Code Dataset** is a large-scale collection of open-sourc
     - min_length = 500            # Minimum length (in characters) after cleaning  
     - max_length = 2000           # Maximum length (in characters) after cleaning
 
-
 - **[Sampled Data](https://github.com/suryachand2k1/DS-5690-Project/blob/main/github_code_sample_random_5langs.csv)**
+
+---
 
 ### Code Model Selection and Environment Setup
 
@@ -82,6 +95,8 @@ The **CodeParrot GitHub Code Dataset** is a large-scale collection of open-sourc
 | codestral        | 22B            |
 
 Models are locally used via Ollama. For more information, please visit **[Ollama](https://ollama.com)**.
+
+---
 
 ### Documentation Prompts Strategy
 
@@ -112,30 +127,28 @@ For full details on each prompt, refer to the following:
 - [Prompt 1 Details](https://github.com/suryachand2k1/DS-5690-Project/blob/main/engineered_prompt-1.md)  
 - [Prompt 2 Details](https://github.com/suryachand2k1/DS-5690-Project/blob/main/engineered_prompt-2.md)
 
-
+---
 
 ### CSV Processing with Ollama Models
 
 - **Workflow Overview:**
   - Loads a CSV of code samples and uses pre-downloaded Ollama models to generate documented code.
   - Two engineered prompts guide the transformation process: one with detailed documentation instructions and another enforcing complete, integrated output.
-
 - **Conversation Management:**
   - Each code sample is processed as a new conversation—Ollama starts a fresh chat without any previous history.
   - A helper function maintains conversation history during the processing of a single code sample (storing the user message and model response as a list of conversations and passing them in) , ensuring clarity and proper tracking while keeping sessions isolated.
-
 - **Incremental Output & Metrics:**
   - Responses and evaluation metrics (such as processing duration and token rates) are saved incrementally to CSV files.
   - Short pauses are added between requests to avoid overloading the API.
 
 For more details, see the full code [here](https://github.com/suryachand2k1/DS-5690-Project/blob/main/DS-5690_Documenting.ipynb).
 
+---
 
 ### Documentation Evaluation Prompt Strategy
 
 - **Evaluation Focus:**  
   Assess only the added documentation against well-defined, binary (Yes/No) criteria without considering code functionality.
-
 - **Structured Breakdown of 14 Binary Criteria:**
   1. **Overall File Summary - Presence:**  
      Is there an overall summary at the top of the file?
@@ -165,11 +178,9 @@ For more details, see the full code [here](https://github.com/suryachand2k1/DS-5
       Is the complete original code included as a separate section?
   14. **Complete Preservation of Original Code - Completeness:**  
       Is there no modification or omission of the original code?
-
 - **Scoring Approach:**  
   - Each criterion is answered with Yes/No (1 point for Yes).
   - All individual scores are aggregated for a final score out of 14.
-
 - **Use of Markdown in Prompt Engineering:**  
   Markdown formatting is applied to:
   - Clearly organize the evaluation criteria.
@@ -177,6 +188,7 @@ For more details, see the full code [here](https://github.com/suryachand2k1/DS-5
 
 For further details, please refer to the full scoring prompt [here](https://github.com/suryachand2k1/DS-5690-Project/blob/main/engineered_prompt-scoring.md).
 
+---
 
 ### Scoring and Aggregation of Evaluation Data
 
@@ -184,12 +196,12 @@ This scoring pipeline assesses the quality of generated documentation by using a
 
 #### Scoring Models
 
-| Scoring Model            | Description                                                                                       | Scoring Code Link                                                                                                                                                             |
-|--------------------------|---------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| **GPT-4o**               | Evaluates documentation quality via a binary rubric using OpenAI's GPT-4.                         | [Scoring Code](https://github.com/suryachand2k1/DS-5690-Project/blob/main/DS-5690_Scoring(Open%20AI).ipynb)                                                                 |
-| **DeepSeek-V3**          | Assesses documentation quality using the DeepSeek API with the same unified scoring prompt.       | [Scoring Code](https://github.com/suryachand2k1/DS-5690-Project/blob/main/DS-5690_Scoring(DeepSeek)%20.ipynb)                                                                 |
-| **Gemini (gemini-2.0-flash)** | Rates documentation with Google's Gemini model by applying identical binary criteria.            | [Scoring Code](https://github.com/suryachand2k1/DS-5690-Project/blob/main/DS-5690_Scoring(Gemini)%20.ipynb)                                                                    |
-| **Anthropic's Claude**   | Uses Anthropic's Claude to evaluate documentation quality based on the unified scoring prompt.    | [Scoring Code](https://github.com/suryachand2k1/DS-5690-Project/blob/main/DS-5690_Scoring(Anthropic).ipynb)                                                                    |
+| Scoring Model               | Description                                                                                       | Scoring Code Link                                                                                                                                                             |
+|-----------------------------|---------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| **GPT-4o**                  | Evaluates documentation quality via a binary rubric using OpenAI's GPT-4.                         | [Scoring Code](https://github.com/suryachand2k1/DS-5690-Project/blob/main/DS-5690_Scoring(Open%20AI).ipynb)                                                                 |
+| **DeepSeek-V3**             | Assesses documentation quality using the DeepSeek API with the same unified scoring prompt.       | [Scoring Code](https://github.com/suryachand2k1/DS-5690-Project/blob/main/DS-5690_Scoring(DeepSeek)%20.ipynb)                                                                 |
+| **Gemini (gemini-2.0-flash)** | Rates documentation with Google's Gemini model by applying identical binary criteria.             | [Scoring Code](https://github.com/suryachand2k1/DS-5690-Project/blob/main/DS-5690_Scoring(Gemini)%20.ipynb)                                                                    |
+| **Anthropic's Claude**      | Uses Anthropic's Claude to evaluate documentation quality based on the unified scoring prompt.    | [Scoring Code](https://github.com/suryachand2k1/DS-5690-Project/blob/main/DS-5690_Scoring(Anthropic).ipynb)                                                                    |
 
 #### Data Aggregation
 
@@ -200,10 +212,9 @@ The evaluation data from multiple systems (Anthropic, DeepSeek, Gemini, and GPT-
 
 For the complete aggregation process, refer to the [Aggregation Code](https://github.com/suryachand2k1/DS-5690-Project/blob/main/Align_the_score_csv.ipynb).
 
-
+---
 
 ## Results and Discussions
-
 
 ### Initial Prediction of Model Performance Based on Specifications
 
@@ -222,28 +233,17 @@ How would you order these models on our documentation task?
 
 <!-- Leave space for your predictions -->
 
+---
 
+<!-- Leave several blank lines below the question for clarity -->
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  
+  
+  
+  
+  
+  
+  
 Based on my initial assumption, here is the ranking (from best to worst predicted performance):
 
 | Model Name         | Parameter Size |
@@ -254,7 +254,7 @@ Based on my initial assumption, here is the ranking (from best to worst predicte
 | codestral          | 22B            |
 | codegemma          | 7B             |
 
-
+---
 
 ### Observed Documentation Quality Results from Scoring LLMs
 
@@ -262,39 +262,45 @@ After analyzing the scorings from our evaluation LLMs (GPT-4o, DeepSeek, Gemini,
 
 ![Collage maker project](https://github.com/user-attachments/assets/192b2ec0-faa2-4bb0-ac24-f1edf032bd5b)
 
-
+---
 
 ### Critical Analysis
 
-
 #### Consistent High Scorers
-Models such as **qwen2.5-coder:32b** and **codestral** consistently received high scores, indicating detailed and well-structured documentation.  
 
+Models such as **qwen2.5-coder:32b** and **codestral** consistently received high scores, indicating detailed and well-structured documentation.
+
+---
 
 #### Moderate Performers
-**deepseek-coder:33b** and **codegemma:7b** showed moderate performance with some variability between individual samples.  
+
+**deepseek-coder:33b** and **codegemma:7b** showed moderate performance with some variability between individual samples.
+
+---
 
 #### Unexpected Underperformance
-Despite having the highest parameter count, **codellama:70b** underperformed—often returning only short summaries or default messages (e.g., stating that documentation cannot be provided due to harmful/unethical or proprietary content) instead of full documentation.  
+
+Despite having the highest parameter count, **codellama:70b** underperformed—often returning only short summaries or default messages (e.g., stating that documentation cannot be provided due to harmful/unethical or proprietary content) instead of full documentation.
+
+---
 
 #### Additional Observations
+
 - The aggregated scores reveal a clear divergence in documentation quality. High-scoring models delivered more complete and instructive outputs, while codellama frequently fell short of expectations.
 - All scoring systems consistently ranked the models similarly, reinforcing the reliability of our unified, binary evaluation rubric.
 - These results suggest that on the code documentation task, a higher parameter count does not necessarily equate to better performance.
 
-
+---
 
 ### Supplementary: Inference Speeds
 
 The table below shows inference performance metrics for each model, measured on a Mac Machine with an **M3 Ultra Chip** and **256GB of VRAM**. Results may vary depending on system load, code complexity, and other factors, but these figures provide a comparative baseline for average processing times and token speeds.
 
-
 <img width="741" alt="Screenshot 2025-04-13 at 12 43 52 PM" src="https://github.com/user-attachments/assets/94b4cfbf-7838-40bf-a205-1978a9912946" />
-
 
 > **Note:**  
 > - All measurements were taken on a Mac with **M3 Ultra** and **256GB VRAM**.  
 > - The **Avg Prompt1** and **Avg Prompt2** columns capture the average time (in seconds) it took each model to complete two main inference steps (or prompts).  
 > - **Avg Overall Speed (tokens/s)** represents an aggregated throughput measure across both prompts.
 
-
+---
