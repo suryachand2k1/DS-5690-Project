@@ -263,6 +263,10 @@ After analyzing the scorings from our evaluation LLMs (GPT-4o, DeepSeek, Gemini,
 ![Collage maker project](https://github.com/user-attachments/assets/192b2ec0-faa2-4bb0-ac24-f1edf032bd5b)
 
 
+
+### Critical Analysis
+
+
 #### Consistent High Scorers
 Models such as **qwen2.5-coder:32b** and **codestral** consistently received high scores, indicating detailed and well-structured documentation.  
 
@@ -277,6 +281,8 @@ Despite having the highest parameter count, **codellama:70b** underperformed—o
 - The aggregated scores reveal a clear divergence in documentation quality. High-scoring models delivered more complete and instructive outputs, while codellama frequently fell short of expectations.
 - All scoring systems consistently ranked the models similarly, reinforcing the reliability of our unified, binary evaluation rubric.
 - These results suggest that on the code documentation task, a higher parameter count does not necessarily equate to better performance.
-  
+
+
+
 
 
