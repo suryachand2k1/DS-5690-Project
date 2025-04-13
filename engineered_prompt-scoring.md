@@ -27,15 +27,15 @@ Your evaluation must be based on the following **14 binary criteria** (each answ
 - **Code Functionality Unchanged:** Is the original code logic left completely untouched?  
   **(Remember: Do not judge if the code executes correctly; simply verify that the documentation did not alter any code parts.)** (Yes/No)
 - **Original Structure Preserved:** Is the original code formatting and structure maintained? (Yes/No)
+      
+### 5. Complete Preservation of Original Code
+- **Unchanged Original Code:** Is there no modification or omission of the original code? (Yes/No)
 
-### 5. Overall Compliance with Documentation Instructions
+### 6. Comment Quality
+- **Ease of Understanding:** Do the comments employ straightforward language that non-native English speakers can easily understand? (Yes/No)
+
+### 7. Overall Compliance with Documentation Instructions
 - **Full Adherence:** Does the documented code include the complete original code with only documentation added following the specified instructions? (Yes/No)
-
-### 6. Original Code Inclusion
-- **Original Code Section Presence:** Does the documented code contain the full "# Original Code:" section? (Yes/No)
-
-### 7. Complete Preservation of Original Code
-- **Completeness:** Is the entirety of the original code present without any modifications or omissions? (Yes/No)
 
 ---
 
