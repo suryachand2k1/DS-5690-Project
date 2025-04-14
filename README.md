@@ -1,4 +1,4 @@
-# DS-5690-Project: Assessing Code Documentation Quality from Popular Code LLMs <=70b parameters Using LLM as a Judge approach with Majority Voting
+# DS-5690-Project: Assessing Code Documentation Quality from Popular Code LLMs <=70b parameters Using Multiple LLMs as a Judge approach
 
 ---
 ---
