@@ -203,7 +203,7 @@ This scoring pipeline assesses the quality of generated documentation by using a
 | **GPT-4o**                  | Evaluates documentation quality via a binary rubric using OpenAI's GPT-4.                         | [Scoring Code](https://github.com/suryachand2k1/DS-5690-Project/blob/main/DS-5690_Scoring(Open%20AI).ipynb)                                                                 |
 | **DeepSeek-V3**             | Assesses documentation quality using the DeepSeek API with the same unified scoring prompt.       | [Scoring Code](https://github.com/suryachand2k1/DS-5690-Project/blob/main/DS-5690_Scoring(DeepSeek)%20.ipynb)                                                                 |
 | **Gemini (gemini-2.0-flash)** | Rates documentation with Google's Gemini model by applying identical binary criteria.             | [Scoring Code](https://github.com/suryachand2k1/DS-5690-Project/blob/main/DS-5690_Scoring(Gemini)%20.ipynb)                                                                    |
-| **Anthropic's Claude**      | Uses Anthropic's Claude to evaluate documentation quality based on the unified scoring prompt.    | [Scoring Code](https://github.com/suryachand2k1/DS-5690-Project/blob/main/DS-5690_Scoring(Anthropic).ipynb)                                                                    |
+| **Anthropic's (Claude 3.7 sonnet)**      | Uses Anthropic's Claude to evaluate documentation quality based on the unified scoring prompt.    | [Scoring Code](https://github.com/suryachand2k1/DS-5690-Project/blob/main/DS-5690_Scoring(Anthropic).ipynb)                                                                    |
 
 #### Data Aggregation
 
