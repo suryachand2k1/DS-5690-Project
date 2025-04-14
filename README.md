@@ -25,7 +25,7 @@ To tackle this challenge, the project follows these key steps:
   - *codellama:70b*
   - *deepseek-coder:33b*
   - *codegemma:7b*
-  - *code:22b*
+  - *codestral:22b*
 - **Evaluation Framework:**  
   Use an LLM-as-a-judge strategy, utilizing state-of-the-art scoring models (GPT-4o, Deepseek v3, Claude 3.7 sonnet, Gemini-2.0-flash) with a majority voting mechanism to ensure robust and objective evaluation of the generated documentation.
 
