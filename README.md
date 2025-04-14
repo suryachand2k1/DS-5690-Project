@@ -140,7 +140,7 @@ For full details on each prompt, refer to the following:
   - A helper function maintains conversation history during the processing of a single code sample (storing the user message and model response as a list of conversations and passing them in) , ensuring clarity and proper tracking while keeping sessions isolated.
 - **Incremental Output & Metrics:**
   - Responses and evaluation metrics (such as processing duration and token rates) are saved incrementally to CSV files.
-  - Short pauses are added between requests to avoid overloading the API.
+  - Short pauses are added between requests to avoid overloading my machine.
 
 For more details, see the full code [here](https://github.com/suryachand2k1/DS-5690-Project/blob/main/DS-5690_Documenting.ipynb).
 
